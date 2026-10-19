@@ -1,4 +1,29 @@
-node_modules
+# Dependencies
+node_modules/
+**/node_modules/
 
+# Build artifacts
 .output/
+**/.output/
 .wrangler/
+**/.wrangler/
+dist/
+build/
+frontend/tmp/
+
+# Python & Pytest
+.pytest_cache/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# Database & Environment
+*.db
+app.db
+.env
+.env.local
+.DS_Store
+Thumbs.db
