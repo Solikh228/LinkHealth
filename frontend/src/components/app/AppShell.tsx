@@ -42,7 +42,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="border-t border-sidebar-border px-6 py-4 text-xs text-sidebar-foreground/60">
           <div className="truncate">{me?.email ?? "…"}</div>
-          {API_MODE === "mock" && <div className="mt-1 text-sidebar-primary">Mock backend</div>}
+          {API_MODE === "mock" ? (
+            <div className="mt-1 text-sidebar-primary">Mock backend</div>
+          ) : (
+            <div className="mt-1 font-mono text-[11px] text-sidebar-foreground/60">Backend: SQLite (:8091)</div>
+          )}
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">

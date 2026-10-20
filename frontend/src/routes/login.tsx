@@ -19,8 +19,8 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const nav = useNavigate();
-  const [email, setEmail] = useState(API_MODE === "mock" ? "alex@studio.dev" : "");
-  const [password, setPassword] = useState(API_MODE === "mock" ? "demo" : "");
+  const [email, setEmail] = useState("alex@studio.dev");
+  const [password, setPassword] = useState(API_MODE === "mock" ? "demo" : "password123");
   const m = useMutation({
     mutationFn: () => api.createSession(email, password),
     onSuccess: (r) => { tokenStore.set(r.token); nav({ to: "/" }); },
@@ -36,7 +36,11 @@ function Login() {
           {m.error && <p className="text-sm text-destructive">{m.error.message}</p>}
           <Button type="submit" className="w-full" disabled={m.isPending}>{m.isPending ? "Signing in…" : "Sign in"}</Button>
         </form>
-        {API_MODE === "mock" && <p className="mt-4 text-xs text-muted-foreground">Mock mode: any credentials work.</p>}
+        {API_MODE === "mock" ? (
+          <p className="mt-4 text-xs text-muted-foreground">Mock mode: any credentials work.</p>
+        ) : (
+          <p className="mt-4 text-xs text-muted-foreground">Seed credentials: alex@studio.dev / password123</p>
+        )}
       </div>
     </div>
   );

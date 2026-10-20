@@ -32,7 +32,7 @@ function Settings() {
             <dt className="text-muted-foreground">Email</dt><dd>{me?.email}</dd>
             <dt className="text-muted-foreground">Workspace</dt><dd>{ws?.name}</dd>
             <dt className="text-muted-foreground">Base currency</dt><dd>{ws?.baseCurrency}</dd>
-            <dt className="text-muted-foreground">Backend</dt><dd className="font-mono">{API_MODE === "mock" ? "mock (in-browser)" : import.meta.env["VITE_API_BASE_URL"]}</dd>
+            <dt className="text-muted-foreground">Backend</dt><dd className="font-mono">{API_MODE === "mock" ? "mock (in-browser)" : (import.meta.env["VITE_API_BASE_URL"] ?? "http://localhost:8091")}</dd>
           </dl>
           <div className="border-t p-5"><Button variant="outline" onClick={() => { tokenStore.clear(); nav({ to: "/login" }); }}>Sign out</Button></div>
         </Panel>

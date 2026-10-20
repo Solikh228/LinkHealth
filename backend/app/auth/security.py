@@ -3,9 +3,10 @@ from typing import Any, Dict, Optional
 import bcrypt
 import jwt
 
-SECRET_KEY = "subtracker-secret-key-change-in-production-local-only"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_DAYS = 30
+from ..config import ACCESS_TOKEN_EXPIRE_MINUTES, JWT_ALGORITHM, SECRET_KEY
+
+ALGORITHM = JWT_ALGORITHM
+ACCESS_TOKEN_EXPIRE_DAYS = ACCESS_TOKEN_EXPIRE_MINUTES // (60 * 24)
 
 
 def hash_password(password: str) -> str:

@@ -295,7 +295,10 @@ class InMemoryStore:
         with self._lock:
             res = list(self.findings.values())
             if status:
-                res = [f for f in res if f.status == status]
+                if status == "open":
+                    res = [f for f in res if f.status in ("new", "reviewing")]
+                else:
+                    res = [f for f in res if f.status == status]
             if finding_type:
                 res = [f for f in res if f.findingType == finding_type]
             return res

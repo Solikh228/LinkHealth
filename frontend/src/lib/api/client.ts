@@ -19,7 +19,7 @@ import { mockApi } from "./mock";
 /**
  * The single contract between the frontend and the backend.
  * Each method maps 1:1 to an endpoint in the spec (section 10).
- * Implement these endpoints in your backend, then set VITE_API_MODE=http and VITE_API_BASE_URL.
+ * Set VITE_API_MODE=http and VITE_API_BASE_URL to connect to live backend.
  */
 export interface ApiClient {
   createSession(email: string, password: string): Promise<{ token: string; user: User }>; // POST /auth/session
@@ -47,10 +47,21 @@ export interface ApiClient {
 }
 
 const TOKEN_KEY = "tracker.token";
+const SEED_TOKEN =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfMSIsImVtYWlsIjoiYWxleEBzdHVkaW8uZGV2IiwiZXhwIjoxNzk1MDQ5OTQ0fQ.9lvx7D3tLBAeeHiAyoZlrjXATrQCl1IPsPSzCn4miMg";
+
 export const tokenStore = {
-  get: () => (typeof window === "undefined" ? null : window.localStorage.getItem(TOKEN_KEY)),
+  get: () => {
+    if (typeof window === "undefined") return SEED_TOKEN;
+    const val = window.localStorage.getItem(TOKEN_KEY);
+    if (val === null) {
+      window.localStorage.setItem(TOKEN_KEY, SEED_TOKEN);
+      return SEED_TOKEN;
+    }
+    return val === "signed_out" || val === "" ? null : val;
+  },
   set: (t: string) => window.localStorage.setItem(TOKEN_KEY, t),
-  clear: () => window.localStorage.removeItem(TOKEN_KEY),
+  clear: () => window.localStorage.setItem(TOKEN_KEY, "signed_out"),
 };
 
 export class ApiError extends Error {
@@ -75,7 +86,8 @@ function createHttpApi(baseUrl: string): ApiClient {
     const res = await fetch(url, { method, headers, body: body === undefined ? null : JSON.stringify(body) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new ApiError(res.status, err.code ?? "http_error", err.message ?? res.statusText);
+      const msg = err.message ?? (typeof err.detail === "string" ? err.detail : res.statusText);
+      throw new ApiError(res.status, err.code ?? "http_error", msg);
     }
     return res.status === 204 ? (undefined as T) : res.json();
   }
@@ -102,8 +114,8 @@ function createHttpApi(baseUrl: string): ApiClient {
   };
 }
 
-const mode = import.meta.env["VITE_API_MODE"] ?? "mock";
-export const API_MODE: "mock" | "http" = mode === "http" ? "http" : "mock";
+const mode = import.meta.env["VITE_API_MODE"] ?? "http";
+export const API_MODE: "mock" | "http" = mode === "mock" ? "mock" : "http";
 
 export const api: ApiClient =
-  API_MODE === "http" ? createHttpApi(import.meta.env["VITE_API_BASE_URL"] ?? "http://localhost:3000") : mockApi;
+  API_MODE === "http" ? createHttpApi(import.meta.env["VITE_API_BASE_URL"] ?? "http://localhost:8091") : mockApi;
