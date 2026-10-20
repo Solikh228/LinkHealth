@@ -1,0 +1,2000 @@
+openapi: 3.1.0
+info:
+  title: SubTracker API
+  description: Backend REST API for Hidden B2B Subscriptions & Waste Finder Tracker
+  version: 1.0.0
+paths:
+  /auth/session:
+    post:
+      tags:
+      - Auth
+      summary: Create Session
+      operationId: create_session_auth_session_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /me:
+    get:
+      tags:
+      - Auth
+      summary: Get Me
+      operationId: get_me_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      security:
+      - HTTPBearer: []
+  /workspace:
+    get:
+      tags:
+      - Auth
+      summary: Get Workspace
+      operationId: get_workspace_workspace_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+      security:
+      - HTTPBearer: []
+  /account:
+    delete:
+      tags:
+      - Auth
+      summary: Delete Account
+      operationId: delete_account_account_delete
+      responses:
+        '204':
+          description: Successful Response
+      security:
+      - HTTPBearer: []
+  /integrations:
+    get:
+      tags:
+      - Integrations
+      summary: List Integrations
+      operationId: list_integrations_integrations_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/IntegrationConnection'
+                type: array
+                title: Response List Integrations Integrations Get
+      security:
+      - HTTPBearer: []
+  /integrations/bank/connect:
+    post:
+      tags:
+      - Integrations
+      summary: Connect Bank
+      operationId: connect_bank_integrations_bank_connect_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectResponse'
+      security:
+      - HTTPBearer: []
+  /integrations/gmail/connect:
+    post:
+      tags:
+      - Integrations
+      summary: Connect Gmail
+      operationId: connect_gmail_integrations_gmail_connect_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectResponse'
+      security:
+      - HTTPBearer: []
+  /integrations/{id}/sync:
+    post:
+      tags:
+      - Integrations
+      summary: Sync Integration
+      operationId: sync_integration_integrations__id__sync_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationConnection'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /integrations/{id}/disconnect:
+    post:
+      tags:
+      - Integrations
+      summary: Disconnect Integration
+      operationId: disconnect_integration_integrations__id__disconnect_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisconnectRequest'
+              default:
+                deleteData: false
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /dashboard/summary:
+    get:
+      tags:
+      - Dashboard
+      summary: Get Dashboard Summary
+      operationId: get_dashboard_summary_dashboard_summary_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+      security:
+      - HTTPBearer: []
+  /transactions:
+    get:
+      tags:
+      - Transactions
+      summary: List Transactions
+      operationId: list_transactions_transactions_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Search term for merchant or description
+          title: Q
+        description: Search term for merchant or description
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Transaction status filter
+          title: Status
+        description: Transaction status filter
+      - name: subscriptionId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by linked subscription
+          title: Subscriptionid
+        description: Filter by linked subscription
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number
+          default: 1
+          title: Page
+        description: Page number
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Items per page
+          default: 50
+          title: Pagesize
+        description: Items per page
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paginated_Transaction_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /subscriptions:
+    get:
+      tags:
+      - Subscriptions
+      summary: List Subscriptions
+      operationId: list_subscriptions_subscriptions_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Subscription'
+                type: array
+                title: Response List Subscriptions Subscriptions Get
+      security:
+      - HTTPBearer: []
+  /subscriptions/{id}:
+    get:
+      tags:
+      - Subscriptions
+      summary: Get Subscription
+      operationId: get_subscription_subscriptions__id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionDetail'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    patch:
+      tags:
+      - Subscriptions
+      summary: Update Subscription
+      operationId: update_subscription_subscriptions__id__patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPatch'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /subscriptions/{id}/confirm:
+    post:
+      tags:
+      - Subscriptions
+      summary: Confirm Subscription
+      operationId: confirm_subscription_subscriptions__id__confirm_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /subscriptions/{id}/dismiss:
+    post:
+      tags:
+      - Subscriptions
+      summary: Dismiss Subscription
+      operationId: dismiss_subscription_subscriptions__id__dismiss_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /findings:
+    get:
+      tags:
+      - Findings
+      summary: List Findings
+      operationId: list_findings_findings_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by status (new, reviewing, confirmed, dismissed, resolved)
+          title: Status
+        description: Filter by status (new, reviewing, confirmed, dismissed, resolved)
+      - name: type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by findingType
+          title: Type
+        description: Filter by findingType
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Finding'
+                title: Response List Findings Findings Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /findings/{id}:
+    get:
+      tags:
+      - Findings
+      summary: Get Finding
+      operationId: get_finding_findings__id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingDetail'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /findings/{id}/review:
+    post:
+      tags:
+      - Findings
+      summary: Review Finding
+      operationId: review_finding_findings__id__review_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewInput'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingDetail'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/auth/session:
+    post:
+      tags:
+      - Auth
+      summary: Create Session
+      operationId: create_session_api_auth_session_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/me:
+    get:
+      tags:
+      - Auth
+      summary: Get Me
+      operationId: get_me_api_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      security:
+      - HTTPBearer: []
+  /api/workspace:
+    get:
+      tags:
+      - Auth
+      summary: Get Workspace
+      operationId: get_workspace_api_workspace_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+      security:
+      - HTTPBearer: []
+  /api/account:
+    delete:
+      tags:
+      - Auth
+      summary: Delete Account
+      operationId: delete_account_api_account_delete
+      responses:
+        '204':
+          description: Successful Response
+      security:
+      - HTTPBearer: []
+  /api/integrations:
+    get:
+      tags:
+      - Integrations
+      summary: List Integrations
+      operationId: list_integrations_api_integrations_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/IntegrationConnection'
+                type: array
+                title: Response List Integrations Api Integrations Get
+      security:
+      - HTTPBearer: []
+  /api/integrations/bank/connect:
+    post:
+      tags:
+      - Integrations
+      summary: Connect Bank
+      operationId: connect_bank_api_integrations_bank_connect_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectResponse'
+      security:
+      - HTTPBearer: []
+  /api/integrations/gmail/connect:
+    post:
+      tags:
+      - Integrations
+      summary: Connect Gmail
+      operationId: connect_gmail_api_integrations_gmail_connect_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectResponse'
+      security:
+      - HTTPBearer: []
+  /api/integrations/{id}/sync:
+    post:
+      tags:
+      - Integrations
+      summary: Sync Integration
+      operationId: sync_integration_api_integrations__id__sync_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationConnection'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/integrations/{id}/disconnect:
+    post:
+      tags:
+      - Integrations
+      summary: Disconnect Integration
+      operationId: disconnect_integration_api_integrations__id__disconnect_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisconnectRequest'
+              default:
+                deleteData: false
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/dashboard/summary:
+    get:
+      tags:
+      - Dashboard
+      summary: Get Dashboard Summary
+      operationId: get_dashboard_summary_api_dashboard_summary_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+      security:
+      - HTTPBearer: []
+  /api/transactions:
+    get:
+      tags:
+      - Transactions
+      summary: List Transactions
+      operationId: list_transactions_api_transactions_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Search term for merchant or description
+          title: Q
+        description: Search term for merchant or description
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Transaction status filter
+          title: Status
+        description: Transaction status filter
+      - name: subscriptionId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by linked subscription
+          title: Subscriptionid
+        description: Filter by linked subscription
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          description: Page number
+          default: 1
+          title: Page
+        description: Page number
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Items per page
+          default: 50
+          title: Pagesize
+        description: Items per page
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paginated_Transaction_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/subscriptions:
+    get:
+      tags:
+      - Subscriptions
+      summary: List Subscriptions
+      operationId: list_subscriptions_api_subscriptions_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Subscription'
+                type: array
+                title: Response List Subscriptions Api Subscriptions Get
+      security:
+      - HTTPBearer: []
+  /api/subscriptions/{id}:
+    get:
+      tags:
+      - Subscriptions
+      summary: Get Subscription
+      operationId: get_subscription_api_subscriptions__id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionDetail'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    patch:
+      tags:
+      - Subscriptions
+      summary: Update Subscription
+      operationId: update_subscription_api_subscriptions__id__patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPatch'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/subscriptions/{id}/confirm:
+    post:
+      tags:
+      - Subscriptions
+      summary: Confirm Subscription
+      operationId: confirm_subscription_api_subscriptions__id__confirm_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/subscriptions/{id}/dismiss:
+    post:
+      tags:
+      - Subscriptions
+      summary: Dismiss Subscription
+      operationId: dismiss_subscription_api_subscriptions__id__dismiss_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/findings:
+    get:
+      tags:
+      - Findings
+      summary: List Findings
+      operationId: list_findings_api_findings_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by status (new, reviewing, confirmed, dismissed, resolved)
+          title: Status
+        description: Filter by status (new, reviewing, confirmed, dismissed, resolved)
+      - name: type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by findingType
+          title: Type
+        description: Filter by findingType
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Finding'
+                title: Response List Findings Api Findings Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/findings/{id}:
+    get:
+      tags:
+      - Findings
+      summary: Get Finding
+      operationId: get_finding_api_findings__id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingDetail'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/findings/{id}/review:
+    post:
+      tags:
+      - Findings
+      summary: Review Finding
+      operationId: review_finding_api_findings__id__review_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewInput'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingDetail'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/health:
+    get:
+      tags:
+      - Health
+      summary: Health Check
+      operationId: health_check_api_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health:
+    get:
+      tags:
+      - Health
+      summary: Health Check
+      operationId: health_check_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /:
+    get:
+      tags:
+      - Health
+      summary: Root
+      operationId: root__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    ConnectResponse:
+      properties:
+        redirectUrl:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Redirecturl
+        connection:
+          $ref: '#/components/schemas/IntegrationConnection'
+      type: object
+      required:
+      - connection
+      title: ConnectResponse
+    DashboardSummary:
+      properties:
+        monthlyRecurringSpend:
+          $ref: '#/components/schemas/Money'
+        annualizedSpend:
+          $ref: '#/components/schemas/Money'
+        subscriptionCount:
+          type: integer
+          title: Subscriptioncount
+        candidateCount:
+          type: integer
+          title: Candidatecount
+        openFindingsCount:
+          type: integer
+          title: Openfindingscount
+        potentialSavings:
+          $ref: '#/components/schemas/Money'
+        userEstimatedSavings:
+          $ref: '#/components/schemas/Money'
+        upcoming:
+          items:
+            $ref: '#/components/schemas/UpcomingItem'
+          type: array
+          title: Upcoming
+        recentChanges:
+          items:
+            $ref: '#/components/schemas/RecentChangeItem'
+          type: array
+          title: Recentchanges
+        spendByCategory:
+          items:
+            $ref: '#/components/schemas/SpendByCategoryItem'
+          type: array
+          title: Spendbycategory
+        connections:
+          items:
+            $ref: '#/components/schemas/IntegrationConnection'
+          type: array
+          title: Connections
+      type: object
+      required:
+      - monthlyRecurringSpend
+      - annualizedSpend
+      - subscriptionCount
+      - candidateCount
+      - openFindingsCount
+      - potentialSavings
+      - userEstimatedSavings
+      - upcoming
+      - recentChanges
+      - spendByCategory
+      - connections
+      title: DashboardSummary
+    DisconnectRequest:
+      properties:
+        deleteData:
+          type: boolean
+          title: Deletedata
+          default: false
+      type: object
+      title: DisconnectRequest
+    EmailEvidence:
+      properties:
+        id:
+          type: string
+          title: Id
+        receivedAt:
+          type: string
+          title: Receivedat
+        senderDomain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Senderdomain
+        subjectMinimized:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subjectminimized
+        evidenceType:
+          type: string
+          enum:
+          - invoice
+          - receipt
+          - renewal
+          - cancellation
+          - other
+          title: Evidencetype
+        amount:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        invoiceDate:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Invoicedate
+        extractionConfidence:
+          type: number
+          title: Extractionconfidence
+        matchScore:
+          type: number
+          title: Matchscore
+        matchStatus:
+          type: string
+          enum:
+          - suggested
+          - confirmed
+          - rejected
+          title: Matchstatus
+        matchReason:
+          type: string
+          title: Matchreason
+      type: object
+      required:
+      - id
+      - receivedAt
+      - evidenceType
+      - extractionConfidence
+      - matchScore
+      - matchStatus
+      - matchReason
+      title: EmailEvidence
+    Finding:
+      properties:
+        id:
+          type: string
+          title: Id
+        subscriptionId:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subscriptionid
+        subscriptionName:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subscriptionname
+        findingType:
+          type: string
+          enum:
+          - possible_duplicate
+          - price_increase
+          - unexpected_charge
+          - low_evidence
+          - renewal_approaching
+          - unclear_vendor
+          title: Findingtype
+        severity:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          title: Severity
+        status:
+          type: string
+          enum:
+          - new
+          - reviewing
+          - confirmed
+          - dismissed
+          - resolved
+          title: Status
+        title:
+          type: string
+          title: Title
+          default: ''
+        explanation:
+          type: string
+          title: Explanation
+        estimatedImpact:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        confidence:
+          type: number
+          title: Confidence
+        ruleVersion:
+          type: string
+          title: Ruleversion
+        createdAt:
+          type: string
+          title: Createdat
+        updatedAt:
+          type: string
+          title: Updatedat
+      type: object
+      required:
+      - id
+      - findingType
+      - severity
+      - status
+      - explanation
+      - confidence
+      - ruleVersion
+      - createdAt
+      - updatedAt
+      title: Finding
+    FindingBrief:
+      properties:
+        id:
+          type: string
+          title: Id
+        title:
+          type: string
+          title: Title
+        findingType:
+          type: string
+          title: Findingtype
+        severity:
+          type: string
+          title: Severity
+        status:
+          type: string
+          title: Status
+        estimatedImpact:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+      type: object
+      required:
+      - id
+      - title
+      - findingType
+      - severity
+      - status
+      title: FindingBrief
+    FindingDetail:
+      properties:
+        id:
+          type: string
+          title: Id
+        subscriptionId:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subscriptionid
+        subscriptionName:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subscriptionname
+        findingType:
+          type: string
+          enum:
+          - possible_duplicate
+          - price_increase
+          - unexpected_charge
+          - low_evidence
+          - renewal_approaching
+          - unclear_vendor
+          title: Findingtype
+        severity:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          title: Severity
+        status:
+          type: string
+          enum:
+          - new
+          - reviewing
+          - confirmed
+          - dismissed
+          - resolved
+          title: Status
+        title:
+          type: string
+          title: Title
+          default: ''
+        explanation:
+          type: string
+          title: Explanation
+        estimatedImpact:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        confidence:
+          type: number
+          title: Confidence
+        ruleVersion:
+          type: string
+          title: Ruleversion
+        createdAt:
+          type: string
+          title: Createdat
+        updatedAt:
+          type: string
+          title: Updatedat
+        evidence:
+          items:
+            $ref: '#/components/schemas/FindingEvidenceItem'
+          type: array
+          title: Evidence
+          default: []
+        reviews:
+          items:
+            $ref: '#/components/schemas/UserReview'
+          type: array
+          title: Reviews
+          default: []
+      type: object
+      required:
+      - id
+      - findingType
+      - severity
+      - status
+      - explanation
+      - confidence
+      - ruleVersion
+      - createdAt
+      - updatedAt
+      title: FindingDetail
+    FindingEvidenceItem:
+      properties:
+        role:
+          type: string
+          enum:
+          - trigger
+          - supporting
+          - context
+          title: Role
+        explanation:
+          type: string
+          title: Explanation
+        transaction:
+          anyOf:
+          - $ref: '#/components/schemas/Transaction'
+          - type: 'null'
+        email:
+          anyOf:
+          - $ref: '#/components/schemas/EmailEvidence'
+          - type: 'null'
+      type: object
+      required:
+      - role
+      - explanation
+      title: FindingEvidenceItem
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    IntegrationConnection:
+      properties:
+        id:
+          type: string
+          title: Id
+        kind:
+          type: string
+          enum:
+          - bank
+          - gmail
+          title: Kind
+        provider:
+          type: string
+          title: Provider
+        displayName:
+          type: string
+          title: Displayname
+        status:
+          type: string
+          enum:
+          - pending
+          - active
+          - needs_reauth
+          - error
+          - disconnected
+          title: Status
+        syncState:
+          type: string
+          enum:
+          - not_connected
+          - connecting
+          - initial_sync
+          - up_to_date
+          - delayed
+          - needs_reauth
+          - error
+          - disconnected
+          title: Syncstate
+        scopesGranted:
+          items:
+            type: string
+          type: array
+          title: Scopesgranted
+        lastSyncAt:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lastsyncat
+        lastSyncStatus:
+          anyOf:
+          - type: string
+            enum:
+            - success
+            - failed
+            - running
+          - type: 'null'
+          title: Lastsyncstatus
+        createdAt:
+          type: string
+          title: Createdat
+      type: object
+      required:
+      - id
+      - kind
+      - provider
+      - displayName
+      - status
+      - syncState
+      - scopesGranted
+      - createdAt
+      title: IntegrationConnection
+    Money:
+      properties:
+        amountMinor:
+          type: integer
+          title: Amountminor
+        currency:
+          type: string
+          title: Currency
+          default: USD
+      type: object
+      required:
+      - amountMinor
+      title: Money
+    Paginated_Transaction_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Transaction'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        page:
+          type: integer
+          title: Page
+        pageSize:
+          type: integer
+          title: Pagesize
+        hasMore:
+          type: boolean
+          title: Hasmore
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      - hasMore
+      title: Paginated[Transaction]
+    RecentChangeItem:
+      properties:
+        subscriptionId:
+          type: string
+          title: Subscriptionid
+        name:
+          type: string
+          title: Name
+        kind:
+          type: string
+          enum:
+          - new
+          - price_change
+          title: Kind
+        date:
+          type: string
+          title: Date
+        detail:
+          type: string
+          title: Detail
+      type: object
+      required:
+      - subscriptionId
+      - name
+      - kind
+      - date
+      - detail
+      title: RecentChangeItem
+    ReviewInput:
+      properties:
+        decision:
+          type: string
+          enum:
+          - confirm
+          - dismiss
+          - mark_reviewing
+          - resolve
+          title: Decision
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+        estimatedSavings:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+      type: object
+      required:
+      - decision
+      title: ReviewInput
+    SessionRequest:
+      properties:
+        email:
+          type: string
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: SessionRequest
+    SessionResponse:
+      properties:
+        token:
+          type: string
+          title: Token
+        user:
+          $ref: '#/components/schemas/User'
+      type: object
+      required:
+      - token
+      - user
+      title: SessionResponse
+    SpendByCategoryItem:
+      properties:
+        category:
+          type: string
+          title: Category
+        monthly:
+          $ref: '#/components/schemas/Money'
+      type: object
+      required:
+      - category
+      - monthly
+      title: SpendByCategoryItem
+    Subscription:
+      properties:
+        id:
+          type: string
+          title: Id
+        vendorName:
+          type: string
+          title: Vendorname
+        vendorDomain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Vendordomain
+        category:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Category
+        displayName:
+          type: string
+          title: Displayname
+        status:
+          type: string
+          enum:
+          - candidate
+          - confirmed
+          - dismissed
+          - inactive
+          title: Status
+        billingInterval:
+          type: string
+          enum:
+          - weekly
+          - monthly
+          - quarterly
+          - annual
+          - irregular
+          - unknown
+          title: Billinginterval
+        expectedAmount:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        monthlyEquivalent:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        estimatedNextChargeAt:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Estimatednextchargeat
+        detectionConfidence:
+          type: number
+          title: Detectionconfidence
+        detectionExplanation:
+          type: string
+          title: Detectionexplanation
+        lastDetectedAt:
+          type: string
+          title: Lastdetectedat
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+      type: object
+      required:
+      - id
+      - vendorName
+      - displayName
+      - status
+      - billingInterval
+      - detectionConfidence
+      - detectionExplanation
+      - lastDetectedAt
+      title: Subscription
+    SubscriptionDetail:
+      properties:
+        id:
+          type: string
+          title: Id
+        vendorName:
+          type: string
+          title: Vendorname
+        vendorDomain:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Vendordomain
+        category:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Category
+        displayName:
+          type: string
+          title: Displayname
+        status:
+          type: string
+          enum:
+          - candidate
+          - confirmed
+          - dismissed
+          - inactive
+          title: Status
+        billingInterval:
+          type: string
+          enum:
+          - weekly
+          - monthly
+          - quarterly
+          - annual
+          - irregular
+          - unknown
+          title: Billinginterval
+        expectedAmount:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        monthlyEquivalent:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        estimatedNextChargeAt:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Estimatednextchargeat
+        detectionConfidence:
+          type: number
+          title: Detectionconfidence
+        detectionExplanation:
+          type: string
+          title: Detectionexplanation
+        lastDetectedAt:
+          type: string
+          title: Lastdetectedat
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+        transactions:
+          items:
+            $ref: '#/components/schemas/Transaction'
+          type: array
+          title: Transactions
+          default: []
+        evidence:
+          items:
+            $ref: '#/components/schemas/EmailEvidence'
+          type: array
+          title: Evidence
+          default: []
+        findings:
+          items:
+            $ref: '#/components/schemas/FindingBrief'
+          type: array
+          title: Findings
+          default: []
+      type: object
+      required:
+      - id
+      - vendorName
+      - displayName
+      - status
+      - billingInterval
+      - detectionConfidence
+      - detectionExplanation
+      - lastDetectedAt
+      title: SubscriptionDetail
+    SubscriptionPatch:
+      properties:
+        displayName:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Displayname
+        category:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Category
+        billingInterval:
+          anyOf:
+          - type: string
+            enum:
+            - weekly
+            - monthly
+            - quarterly
+            - annual
+            - irregular
+            - unknown
+          - type: 'null'
+          title: Billinginterval
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+        status:
+          anyOf:
+          - type: string
+            enum:
+            - candidate
+            - confirmed
+            - dismissed
+            - inactive
+          - type: 'null'
+          title: Status
+      type: object
+      title: SubscriptionPatch
+    Transaction:
+      properties:
+        id:
+          type: string
+          title: Id
+        connectionId:
+          type: string
+          title: Connectionid
+        accountName:
+          type: string
+          title: Accountname
+        postedAt:
+          type: string
+          title: Postedat
+        amount:
+          $ref: '#/components/schemas/Money'
+        descriptionRaw:
+          type: string
+          title: Descriptionraw
+        merchantNormalized:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Merchantnormalized
+        status:
+          type: string
+          enum:
+          - pending
+          - posted
+          - reversed
+          - removed
+          title: Status
+        isRecurringCandidate:
+          type: boolean
+          title: Isrecurringcandidate
+        subscriptionId:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subscriptionid
+      type: object
+      required:
+      - id
+      - connectionId
+      - accountName
+      - postedAt
+      - amount
+      - descriptionRaw
+      - status
+      - isRecurringCandidate
+      title: Transaction
+    UpcomingItem:
+      properties:
+        subscriptionId:
+          type: string
+          title: Subscriptionid
+        name:
+          type: string
+          title: Name
+        date:
+          type: string
+          title: Date
+        amount:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+      type: object
+      required:
+      - subscriptionId
+      - name
+      - date
+      title: UpcomingItem
+    User:
+      properties:
+        id:
+          type: string
+          title: Id
+        email:
+          type: string
+          title: Email
+        createdAt:
+          type: string
+          title: Createdat
+      type: object
+      required:
+      - id
+      - email
+      - createdAt
+      title: User
+    UserReview:
+      properties:
+        id:
+          type: string
+          title: Id
+        decision:
+          type: string
+          enum:
+          - confirm
+          - dismiss
+          - mark_reviewing
+          - resolve
+          title: Decision
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+        estimatedSavings:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        createdAt:
+          type: string
+          title: Createdat
+      type: object
+      required:
+      - id
+      - decision
+      - createdAt
+      title: UserReview
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    Workspace:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        ownerUserId:
+          type: string
+          title: Owneruserid
+        baseCurrency:
+          type: string
+          title: Basecurrency
+          default: USD
+        createdAt:
+          type: string
+          title: Createdat
+      type: object
+      required:
+      - id
+      - name
+      - ownerUserId
+      - createdAt
+      title: Workspace
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer
