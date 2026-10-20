@@ -41,6 +41,9 @@ class Connection(Base):
     provider: Mapped[str] = mapped_column(String(50), nullable=False)  # plaid, gmail, etc.
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="connected")
     last_synced_at: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    encrypted_access_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    consent_expires_at: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    sync_cursor: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     user: Mapped[Optional["User"]] = relationship("User", back_populates="connections")
     transactions: Mapped[List["Transaction"]] = relationship(

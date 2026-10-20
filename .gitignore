@@ -22,7 +22,11 @@ venv/
 
 # Database & Environment
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 app.db
+subtracker.db
 .env
 .env.local
 .DS_Store
