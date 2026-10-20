@@ -288,6 +288,7 @@ class SqlAlchemySubscriptionRepository(SubscriptionRepository):
         return self.get_by_id(subscription.id) or _sub_to_response(item)
 
     def clear(self) -> None:
+        self.session.execute(delete(BillingEvidence))
         self.session.execute(delete(Subscription))
         self.session.commit()
 
@@ -396,6 +397,7 @@ class SqlAlchemyFindingRepository(FindingRepository):
         return _finding_to_response(item)
 
     def clear(self) -> None:
+        self.session.execute(delete(Action))
         self.session.execute(delete(Finding))
         self.session.commit()
 

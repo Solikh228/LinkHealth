@@ -16,6 +16,7 @@ from repositories.base import (
     TransactionRepository,
 )
 from schemas import ConnectionResponse
+from services.cadence import detect_subscriptions
 from services.synthetic_data import generate_synthetic_data
 from services.waste_detector import generate_waste_findings
 
@@ -52,12 +53,12 @@ def sync_connections(
     data = generate_synthetic_data()
     transactions = data.get("transactions", [])
     evidence = data.get("evidence", [])
-    subscriptions = data.get("subscriptions", [])
 
     for tx in transactions:
         tx_repo.add(tx)
 
-    for sub in subscriptions:
+    detected_subs = detect_subscriptions(transactions, evidence)
+    for sub in detected_subs:
         sub_repo.add(sub)
 
     # Run detection pipeline

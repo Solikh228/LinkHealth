@@ -56,7 +56,7 @@ def upgrade() -> None:
     sa.Column('amount_minor', sa.Integer(), nullable=False),
     sa.Column('currency', sa.String(length=10), nullable=False),
     sa.Column('monthly_equivalent_minor', sa.Integer(), nullable=False),
-    sa.Column('next_renewal_date', sa.String(length=64), nullable=False),
+    sa.Column('next_renewal_date', sa.String(length=64), nullable=True),
     sa.Column('confidence', sa.Float(), nullable=False),
     sa.Column('explanation', sa.Text(), nullable=False),
     sa.Column('last_charge_date', sa.String(length=64), nullable=False),

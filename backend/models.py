@@ -66,7 +66,7 @@ class Subscription(Base):
     amount_minor: Mapped[int] = mapped_column(Integer, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD")
     monthly_equivalent_minor: Mapped[int] = mapped_column(Integer, nullable=False)
-    next_renewal_date: Mapped[str] = mapped_column(String(64), nullable=False)
+    next_renewal_date: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     explanation: Mapped[str] = mapped_column(Text, nullable=False)
     last_charge_date: Mapped[str] = mapped_column(String(64), nullable=False)
