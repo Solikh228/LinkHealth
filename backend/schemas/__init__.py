@@ -112,7 +112,7 @@ class ConnectionResponse(BaseModel):
     type: Literal["bank", "email"]
     provider: str
     status: Literal["connected", "syncing", "error", "disconnected"]
-    lastSyncedAt: str
+    lastSyncedAt: Optional[str] = None
     accountMask: Optional[str] = None
     emailAddress: Optional[str] = None
 

@@ -47,6 +47,7 @@ def _sub_to_response(model: Subscription) -> SubscriptionResponse:
             receivedAt=e.received_at,
             confidence=e.confidence,
             snippet=e.snippet,
+            extractedAmountMinor=e.amount_minor,
         )
         for e in (model.billing_evidence or [])
     ]

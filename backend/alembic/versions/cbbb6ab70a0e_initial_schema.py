@@ -39,6 +39,11 @@ def upgrade() -> None:
     sa.Column('provider', sa.String(length=50), nullable=False),
     sa.Column('status', sa.String(length=50), nullable=False),
     sa.Column('last_synced_at', sa.String(length=64), nullable=True),
+    sa.Column('encrypted_access_token', sa.Text(), nullable=True),
+    sa.Column('encrypted_refresh_token', sa.Text(), nullable=True),
+    sa.Column('scopes_granted', sa.String(length=255), nullable=True),
+    sa.Column('consent_expires_at', sa.String(length=64), nullable=True),
+    sa.Column('sync_cursor', sa.String(length=255), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -76,6 +81,11 @@ def upgrade() -> None:
     sa.Column('received_at', sa.String(length=64), nullable=False),
     sa.Column('confidence', sa.Float(), nullable=False),
     sa.Column('snippet', sa.Text(), nullable=True),
+    sa.Column('vendor_name', sa.String(length=255), nullable=True),
+    sa.Column('amount_minor', sa.Integer(), nullable=True),
+    sa.Column('currency', sa.String(length=10), nullable=True),
+    sa.Column('invoice_date', sa.String(length=64), nullable=True),
+    sa.Column('provider_message_id', sa.String(length=255), nullable=True),
     sa.ForeignKeyConstraint(['connection_id'], ['connections.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['subscription_id'], ['subscriptions.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')

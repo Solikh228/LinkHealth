@@ -42,6 +42,8 @@ class Connection(Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="connected")
     last_synced_at: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     encrypted_access_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    encrypted_refresh_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    scopes_granted: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     consent_expires_at: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     sync_cursor: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
@@ -132,6 +134,11 @@ class BillingEvidence(Base):
     received_at: Mapped[str] = mapped_column(String(64), nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     snippet: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    vendor_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    amount_minor: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    currency: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, default="USD")
+    invoice_date: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    provider_message_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     subscription: Mapped[Optional["Subscription"]] = relationship(
         "Subscription", back_populates="billing_evidence"
