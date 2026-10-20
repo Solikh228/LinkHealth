@@ -14,6 +14,7 @@ import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as WasteFinderRouteImport } from './routes/waste-finder'
 import { Route as FindingsIndexRouteImport } from './routes/findings.index'
 import { Route as FindingsIdRouteImport } from './routes/findings.$id'
 import { Route as SubscriptionsIndexRouteImport } from './routes/subscriptions.index'
@@ -44,6 +45,11 @@ const TransactionsRoute = TransactionsRouteImport.update({
   path: '/transactions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WasteFinderRoute = WasteFinderRouteImport.update({
+  id: '/waste-finder',
+  path: '/waste-finder',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FindingsIndexRoute = FindingsIndexRouteImport.update({
   id: '/findings/',
   path: '/findings/',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
+  '/waste-finder': typeof WasteFinderRoute
   '/findings/$id': typeof FindingsIdRoute
   '/subscriptions/$id': typeof SubscriptionsIdRoute
   '/findings/': typeof FindingsIndexRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
+  '/waste-finder': typeof WasteFinderRoute
   '/findings/$id': typeof FindingsIdRoute
   '/subscriptions/$id': typeof SubscriptionsIdRoute
   '/findings': typeof FindingsIndexRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
+  '/waste-finder': typeof WasteFinderRoute
   '/findings/$id': typeof FindingsIdRoute
   '/subscriptions/$id': typeof SubscriptionsIdRoute
   '/findings/': typeof FindingsIndexRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/transactions'
+    | '/waste-finder'
     | '/findings/$id'
     | '/subscriptions/$id'
     | '/findings/'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/transactions'
+    | '/waste-finder'
     | '/findings/$id'
     | '/subscriptions/$id'
     | '/findings'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/transactions'
+    | '/waste-finder'
     | '/findings/$id'
     | '/subscriptions/$id'
     | '/findings/'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   TransactionsRoute: typeof TransactionsRoute
+  WasteFinderRoute: typeof WasteFinderRoute
   FindingsIdRoute: typeof FindingsIdRoute
   SubscriptionsIdRoute: typeof SubscriptionsIdRoute
   FindingsIndexRoute: typeof FindingsIndexRoute
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TransactionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/waste-finder': {
+      id: '/waste-finder'
+      path: '/waste-finder'
+      fullPath: '/waste-finder'
+      preLoaderRoute: typeof WasteFinderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/findings/': {
       id: '/findings/'
       path: '/findings'
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   TransactionsRoute: TransactionsRoute,
+  WasteFinderRoute: WasteFinderRoute,
   FindingsIdRoute: FindingsIdRoute,
   SubscriptionsIdRoute: SubscriptionsIdRoute,
   FindingsIndexRoute: FindingsIndexRoute,
