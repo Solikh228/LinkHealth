@@ -114,3 +114,11 @@ class ConnectionRepository(ABC):
     @abstractmethod
     def disconnect(self, connection_id: str, delete_data: bool = False) -> bool:
         pass
+
+    @abstractmethod
+    def add(self, connection: ConnectionResponse) -> ConnectionResponse:
+        pass
+
+    @abstractmethod
+    def clear(self) -> None:
+        pass

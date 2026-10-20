@@ -201,3 +201,12 @@ class InMemoryConnectionRepository(ConnectionRepository):
                 c.status = "disconnected"
                 return True
             return False
+
+    def add(self, connection: ConnectionResponse) -> ConnectionResponse:
+        with self._lock:
+            self._conns[connection.id] = connection
+            return connection
+
+    def clear(self) -> None:
+        with self._lock:
+            self._conns.clear()

@@ -1,15 +1,23 @@
+import os
+import threading
 from typing import Generator
+from fastapi import Depends
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from database import Base, SessionLocal, engine, get_db
+from models import Connection, Finding, Subscription, Transaction
 from repositories.base import (
     ConnectionRepository,
     FindingRepository,
     SubscriptionRepository,
     TransactionRepository,
 )
-from repositories.memory import (
-    InMemoryConnectionRepository,
-    InMemoryFindingRepository,
-    InMemorySubscriptionRepository,
-    InMemoryTransactionRepository,
+from repositories.sqlalchemy import (
+    SqlAlchemyConnectionRepository,
+    SqlAlchemyFindingRepository,
+    SqlAlchemySubscriptionRepository,
+    SqlAlchemyTransactionRepository,
 )
 from schemas import (
     BillingEvidenceResponse,
@@ -20,7 +28,6 @@ from schemas import (
     TransactionResponse,
 )
 
-# Seed in-memory repositories
 _seed_subs = {
     "sub_figma": SubscriptionResponse(
         id="sub_figma",
@@ -100,23 +107,46 @@ _seed_connections = {
     )
 }
 
-_sub_repo = InMemorySubscriptionRepository(_seed_subs)
-_finding_repo = InMemoryFindingRepository(_seed_findings)
-_tx_repo = InMemoryTransactionRepository()
-_conn_repo = InMemoryConnectionRepository(_seed_connections)
+_init_lock = threading.Lock()
+_db_initialized = False
 
 
-def get_subscription_repo() -> SubscriptionRepository:
-    return _sub_repo
+def ensure_db_initialized():
+    global _db_initialized
+    if not _db_initialized:
+        with _init_lock:
+            if not _db_initialized:
+                Base.metadata.create_all(bind=engine)
+                with SessionLocal() as session:
+                    existing_sub = session.scalars(select(Subscription)).first()
+                    if existing_sub is None:
+                        conn_repo = SqlAlchemyConnectionRepository(session)
+                        sub_repo = SqlAlchemySubscriptionRepository(session)
+                        finding_repo = SqlAlchemyFindingRepository(session)
+                        for conn in _seed_connections.values():
+                            conn_repo.add(conn)
+                        for sub in _seed_subs.values():
+                            sub_repo.add(sub)
+                        for finding in _seed_findings.values():
+                            finding_repo.add(finding)
+                _db_initialized = True
 
 
-def get_finding_repo() -> FindingRepository:
-    return _finding_repo
+def get_subscription_repo(db: Session = Depends(get_db)) -> SubscriptionRepository:
+    ensure_db_initialized()
+    return SqlAlchemySubscriptionRepository(db)
 
 
-def get_transaction_repo() -> TransactionRepository:
-    return _tx_repo
+def get_finding_repo(db: Session = Depends(get_db)) -> FindingRepository:
+    ensure_db_initialized()
+    return SqlAlchemyFindingRepository(db)
 
 
-def get_connection_repo() -> ConnectionRepository:
-    return _conn_repo
+def get_transaction_repo(db: Session = Depends(get_db)) -> TransactionRepository:
+    ensure_db_initialized()
+    return SqlAlchemyTransactionRepository(db)
+
+
+def get_connection_repo(db: Session = Depends(get_db)) -> ConnectionRepository:
+    ensure_db_initialized()
+    return SqlAlchemyConnectionRepository(db)

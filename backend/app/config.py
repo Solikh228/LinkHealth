@@ -27,7 +27,7 @@ _load_env_file(BACKEND_DIR.parent / ".env")
 # Database URL configuration (database-agnostic, defaults to SQLite)
 # Supports PostgreSQL, MySQL, SQLite, etc.
 DEFAULT_DB_FILE = BACKEND_DIR / "subtracker.db"
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_FILE}")
+DATABASE_URL = os.getenv("LEGACY_DATABASE_URL", f"sqlite:///{DEFAULT_DB_FILE}")
 
 # Normalization for legacy postgres:// URLs
 if DATABASE_URL.startswith("postgres://"):

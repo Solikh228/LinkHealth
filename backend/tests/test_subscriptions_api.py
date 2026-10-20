@@ -53,3 +53,9 @@ def test_get_and_patch_subscription():
     # Verify not found for non-existent
     err_res = client.get("/api/subscriptions/non_existent_id")
     assert err_res.status_code == 404
+
+    # Reset back to original state for test isolation
+    client.patch(
+        "/api/subscriptions/sub_figma",
+        json={"name": "Figma Professional", "status": "active"},
+    )
