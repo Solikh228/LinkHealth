@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConnectionsRouteImport } from './routes/connections'
 import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RenewalsRouteImport } from './routes/renewals'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as WasteFinderRouteImport } from './routes/waste-finder'
@@ -39,6 +40,11 @@ const IntegrationsRoute = IntegrationsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RenewalsRoute = RenewalsRouteImport.update({
+  id: '/renewals',
+  path: '/renewals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/connections': typeof ConnectionsRoute
   '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
+  '/renewals': typeof RenewalsRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
   '/waste-finder': typeof WasteFinderRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/connections': typeof ConnectionsRoute
   '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
+  '/renewals': typeof RenewalsRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
   '/waste-finder': typeof WasteFinderRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/connections': typeof ConnectionsRoute
   '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
+  '/renewals': typeof RenewalsRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
   '/waste-finder': typeof WasteFinderRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/connections'
     | '/integrations'
     | '/login'
+    | '/renewals'
     | '/settings'
     | '/transactions'
     | '/waste-finder'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/connections'
     | '/integrations'
     | '/login'
+    | '/renewals'
     | '/settings'
     | '/transactions'
     | '/waste-finder'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/connections'
     | '/integrations'
     | '/login'
+    | '/renewals'
     | '/settings'
     | '/transactions'
     | '/waste-finder'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   ConnectionsRoute: typeof ConnectionsRoute
   IntegrationsRoute: typeof IntegrationsRoute
   LoginRoute: typeof LoginRoute
+  RenewalsRoute: typeof RenewalsRoute
   SettingsRoute: typeof SettingsRoute
   TransactionsRoute: typeof TransactionsRoute
   WasteFinderRoute: typeof WasteFinderRoute
@@ -201,6 +214,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/renewals': {
+      id: '/renewals'
+      path: '/renewals'
+      fullPath: '/renewals'
+      preLoaderRoute: typeof RenewalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -260,6 +280,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConnectionsRoute: ConnectionsRoute,
   IntegrationsRoute: IntegrationsRoute,
   LoginRoute: LoginRoute,
+  RenewalsRoute: RenewalsRoute,
   SettingsRoute: SettingsRoute,
   TransactionsRoute: TransactionsRoute,
   WasteFinderRoute: WasteFinderRoute,

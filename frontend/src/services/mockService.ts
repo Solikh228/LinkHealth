@@ -4,6 +4,7 @@ import type {
   Finding,
   FindingDecision,
   OverviewMetrics,
+  Renewal,
   Subscription,
   Transaction,
 } from "../types";
@@ -397,5 +398,104 @@ export const mockService = {
     findings = [];
     transactions = [];
     connections = [];
+  },
+
+  async getRenewals(): Promise<Renewal[]> {
+    await delay();
+    return [
+      {
+        id: "ren_notion",
+        subscriptionId: "sub_notion",
+        vendorName: "Notion Plus",
+        amount: { amountMinor: 1200, currency: "USD" },
+        dueDate: "2026-10-22",
+        cadence: "monthly",
+        evidenceTag: "Confirmed via Gmail invoice",
+        hasReminder: false,
+        timeWindow: "next_7_days",
+      },
+      {
+        id: "ren_zoom",
+        subscriptionId: "sub_zoom",
+        vendorName: "Zoom Workplace",
+        amount: { amountMinor: 1599, currency: "USD" },
+        dueDate: "2026-10-25",
+        cadence: "monthly",
+        evidenceTag: "Predicted from 3 past monthly charges",
+        hasReminder: false,
+        timeWindow: "next_7_days",
+      },
+      {
+        id: "ren_figma",
+        subscriptionId: "sub_figma",
+        vendorName: "Figma Professional",
+        amount: { amountMinor: 1500, currency: "USD" },
+        dueDate: "2026-10-27",
+        cadence: "monthly",
+        evidenceTag: "Predicted from 6 past monthly charges",
+        hasReminder: true,
+        timeWindow: "next_7_days",
+      },
+      {
+        id: "ren_adobe",
+        subscriptionId: "sub_adobe",
+        vendorName: "Adobe Creative Cloud",
+        amount: { amountMinor: 5999, currency: "USD" },
+        dueDate: "2026-10-30",
+        cadence: "monthly",
+        evidenceTag: "Confirmed via Gmail renewal notice",
+        hasReminder: true,
+        timeWindow: "next_30_days",
+      },
+      {
+        id: "ren_slack",
+        subscriptionId: "sub_slack",
+        vendorName: "Slack Pro",
+        amount: { amountMinor: 10400, currency: "USD" },
+        dueDate: "2026-10-31",
+        cadence: "annual",
+        evidenceTag: "Confirmed via Gmail renewal notice",
+        hasReminder: false,
+        timeWindow: "next_30_days",
+      },
+      {
+        id: "ren_google",
+        subscriptionId: "sub_google",
+        vendorName: "Google Workspace",
+        amount: { amountMinor: 1800, currency: "USD" },
+        dueDate: "2026-11-01",
+        cadence: "monthly",
+        evidenceTag: "Predicted from bank charges",
+        hasReminder: false,
+        timeWindow: "next_30_days",
+      },
+      {
+        id: "ren_aws",
+        subscriptionId: "sub_aws",
+        vendorName: "Amazon Web Services",
+        amount: { amountMinor: 4900, currency: "USD" },
+        dueDate: "2026-11-02",
+        cadence: "monthly",
+        evidenceTag: "Predicted from variable usage",
+        hasReminder: false,
+        timeWindow: "next_30_days",
+      },
+      {
+        id: "ren_domains",
+        subscriptionId: "sub_aws",
+        vendorName: "Namecheap Domains",
+        amount: { amountMinor: 3498, currency: "USD" },
+        dueDate: "2026-11-20",
+        cadence: "annual",
+        evidenceTag: "Predicted annual charge",
+        hasReminder: false,
+        timeWindow: "later_this_quarter",
+      },
+    ];
+  },
+
+  async toggleRenewalReminder(renewalId: string): Promise<boolean> {
+    await delay();
+    return true;
   },
 };

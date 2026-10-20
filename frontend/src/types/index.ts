@@ -44,6 +44,18 @@ export interface Subscription {
   lastChargeDate: string;
 }
 
+export interface Renewal {
+  id: string;
+  subscriptionId: string;
+  vendorName: string;
+  amount: Money;
+  dueDate: string;
+  cadence: BillingInterval;
+  evidenceTag: string;
+  hasReminder: boolean;
+  timeWindow: "next_7_days" | "next_30_days" | "later_this_quarter";
+}
+
 export type FindingType =
   | "forgotten_charge"
   | "trial_conversion"
