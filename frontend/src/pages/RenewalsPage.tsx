@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/app/AppShell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RenewalItemCard } from "@/components/renewals/RenewalItemCard";
-import { mockService } from "@/services/mockService";
+import { apiClient } from "@/services/apiClient";
 import type { Renewal } from "@/types";
 
 export function RenewalsPage() {
@@ -15,7 +15,7 @@ export function RenewalsPage() {
   const fetchRenewals = async () => {
     setLoading(true);
     try {
-      const data = await mockService.getRenewals();
+      const data = await apiClient.getRenewals();
       setRenewals(data);
     } finally {
       setLoading(false);

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { DeleteDataDialog } from "@/components/connections/DeleteDataDialog";
-import { mockService } from "@/services/mockService";
+import { apiClient } from "@/services/apiClient";
 import type { Connection } from "@/types";
 
 export function ConnectionsPage() {
@@ -17,7 +17,7 @@ export function ConnectionsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const fetchConnections = async () => {
-    const conns = await mockService.getConnections();
+    const conns = await apiClient.getConnections();
     setConnections(conns);
   };
 
@@ -33,7 +33,7 @@ export function ConnectionsPage() {
     const timer2 = setTimeout(() => setSyncProgress(95), 600);
 
     try {
-      const updated = await mockService.triggerSync(id);
+      const updated = await apiClient.triggerSync(id);
       setSyncProgress(100);
       setConnections((prev) => prev.map((c) => (c.id === id ? updated : c)));
       toast.success("Synchronization Complete", {
@@ -52,7 +52,7 @@ export function ConnectionsPage() {
   };
 
   const handleDisconnect = async (id: string) => {
-    await mockService.disconnectConnection(id);
+    await apiClient.disconnectConnection(id);
     setConnections((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: "disconnected" as const } : c))
     );
@@ -62,7 +62,7 @@ export function ConnectionsPage() {
   };
 
   const handleDeleteAllData = async () => {
-    await mockService.deleteUserData();
+    await apiClient.deleteUserData();
     await fetchConnections();
     toast.success("All Imported Data Purged", {
       description: "Stored transactions, email snippets, and findings completely erased.",

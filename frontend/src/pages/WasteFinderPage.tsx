@@ -3,7 +3,7 @@ import { Sparkles, CheckCircle2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/app/AppShell";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockService } from "@/services/mockService";
+import { apiClient } from "@/services/apiClient";
 import { WasteCard } from "@/components/waste/WasteCard";
 import type { Finding, FindingDecision } from "@/types";
 
@@ -15,7 +15,7 @@ export function WasteFinderPage() {
   const loadFindings = async () => {
     setLoading(true);
     try {
-      const data = await mockService.getFindings();
+      const data = await apiClient.getFindings();
       setFindings(data);
     } finally {
       setLoading(false);
@@ -36,13 +36,13 @@ export function WasteFinderPage() {
     );
 
     try {
-      await mockService.updateFindingDecision(findingId, decision);
+      await apiClient.updateFindingDecision(findingId, decision);
       toast.success(`Action applied: ${decision.replace("_", " ")}`, {
         description: `Updated status for ${original.subscriptionName}`,
         action: {
           label: "Undo",
           onClick: async () => {
-            await mockService.updateFindingDecision(findingId, "open" as any);
+            await apiClient.updateFindingDecision(findingId, "open" as any);
             setFindings((prev) =>
               prev.map((f) => (f.id === findingId ? { ...f, status: "open", decision: undefined } : f))
             );

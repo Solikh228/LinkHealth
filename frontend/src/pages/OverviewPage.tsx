@@ -6,7 +6,7 @@ import { Panel, Pill, SeverityDot } from "@/components/app/bits";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockService } from "@/services/mockService";
+import { apiClient } from "@/services/apiClient";
 import type { Finding, OverviewMetrics, Subscription } from "@/types";
 
 function formatMoney(amountMinor: number, currency = "USD"): string {
@@ -24,9 +24,9 @@ export function OverviewPage() {
     setLoading(true);
     try {
       const [m, f, s] = await Promise.all([
-        mockService.getOverviewMetrics(),
-        mockService.getFindings(),
-        mockService.getSubscriptions(),
+        apiClient.getOverviewMetrics(),
+        apiClient.getFindings(),
+        apiClient.getSubscriptions(),
       ]);
       setMetrics(m);
       setFindings(f);
@@ -41,7 +41,7 @@ export function OverviewPage() {
   }, []);
 
   const handleQuickAction = async (findingId: string, decision: "confirmed_waste" | "dismissed") => {
-    await mockService.updateFindingDecision(findingId, decision);
+    await apiClient.updateFindingDecision(findingId, decision);
     await loadData();
   };
 

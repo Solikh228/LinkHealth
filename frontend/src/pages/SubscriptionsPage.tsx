@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockService } from "@/services/mockService";
+import { apiClient } from "@/services/apiClient";
 import { SubscriptionDetailDrawer } from "@/components/subscriptions/SubscriptionDetailDrawer";
 import type { Subscription } from "@/types";
 
@@ -22,7 +22,7 @@ export function SubscriptionsPage() {
   const fetchSubs = async () => {
     setLoading(true);
     try {
-      const data = await mockService.getSubscriptions();
+      const data = await apiClient.getSubscriptions();
       setSubscriptions(data);
     } finally {
       setLoading(false);
