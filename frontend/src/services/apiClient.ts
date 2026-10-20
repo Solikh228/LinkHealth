@@ -213,4 +213,36 @@ export const apiClient = {
   async toggleRenewalReminder(renewalId: string): Promise<boolean> {
     return true;
   },
+
+  async importCsvStatement(payload: {
+    csvContent: string;
+    dateColumn?: string;
+    merchantColumn?: string;
+    amountColumn?: string;
+    currencyColumn?: string;
+    defaultCurrency?: string;
+  }): Promise<{ success: boolean; importedTransactions: number; detectedSubscriptions: number; detectedFindings: number }> {
+    return request("/api/statements/import-csv", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async uploadCsvStatement(formData: FormData): Promise<any> {
+    const url = `${BASE_URL}/api/statements/upload-csv`;
+    const res = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "CSV upload failed" }));
+      toast.error(err.detail || "CSV upload failed");
+      throw new Error(err.detail || "CSV upload failed");
+    }
+    return res.json();
+  },
+
+  getSavingsCsvExportUrl(): string {
+    return `${BASE_URL}/api/reports/savings-csv`;
+  },
 };

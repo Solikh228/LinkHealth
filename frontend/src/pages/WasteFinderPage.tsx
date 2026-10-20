@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Sparkles, CheckCircle2, RefreshCw } from "lucide-react";
+import { Sparkles, CheckCircle2, RefreshCw, Download } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/app/AppShell";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/services/apiClient";
 import { WasteCard } from "@/components/waste/WasteCard";
@@ -71,12 +72,20 @@ export function WasteFinderPage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Hypothesis Engine" title="Waste Finder">
-        {confirmedSavingsTotal > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="size-4" />
-            <span>Confirmed Savings: ${(confirmedSavingsTotal / 100).toFixed(2)}/mo</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" asChild className="gap-1.5 h-8 text-xs">
+            <a href={apiClient.getSavingsCsvExportUrl()} download="savings_report.csv">
+              <Download className="size-3.5" />
+              Export Savings CSV
+            </a>
+          </Button>
+          {confirmedSavingsTotal > 0 && (
+            <div className="flex items-center gap-2 rounded-lg border bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="size-4" />
+              <span>Confirmed Savings: ${(confirmedSavingsTotal / 100).toFixed(2)}/mo</span>
+            </div>
+          )}
+        </div>
       </PageHeader>
 
       <p className="-mt-4 text-sm text-muted-foreground max-w-3xl">

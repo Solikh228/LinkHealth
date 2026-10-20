@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Landmark, Mail, RefreshCw, ShieldCheck, Trash2, Unlink, CheckCircle2 } from "lucide-react";
+import { Landmark, Mail, RefreshCw, ShieldCheck, Trash2, Unlink, CheckCircle2, Upload, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/app/AppShell";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ export function ConnectionsPage() {
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncProgress, setSyncProgress] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const fetchConnections = async () => {
     const conns = await apiClient.getConnections();
@@ -24,6 +25,27 @@ export function ConnectionsPage() {
   useEffect(() => {
     fetchConnections();
   }, []);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await apiClient.uploadCsvStatement(formData);
+      toast.success("CSV Statement Ingested", {
+        description: `Imported ${result.importedTransactions} transactions and detected ${result.detectedSubscriptions} subscriptions.`,
+      });
+      await fetchConnections();
+    } catch {
+      toast.error("Failed to upload statement CSV");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
 
   const handleSync = async (id: string) => {
     setSyncingId(id);
@@ -186,6 +208,41 @@ export function ConnectionsPage() {
           );
         })}
       </div>
+
+      {/* Manual CSV Statement Import */}
+      <Card className="border border-border/80">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <FileText className="size-5 text-primary" />
+            Manual Bank Statement CSV Upload
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Import bank statement CSV files directly to discover subscriptions without connecting an external bank account. Date, Merchant, and Amount columns are automatically detected.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={uploading}
+              />
+              <Button variant="outline" size="sm" className="gap-2 text-xs" asChild disabled={uploading}>
+                <span>
+                  <Upload className={`size-3.5 ${uploading ? "animate-spin" : ""}`} />
+                  {uploading ? "Importing Statement..." : "Select CSV Statement"}
+                </span>
+              </Button>
+            </label>
+            <span className="text-[11px] text-muted-foreground">
+              Accepts .csv files (Chase, Mercury, Silicon Valley Bank, Brex, etc.)
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Clear Privacy Disclosures */}
       <Card className="border border-border/80 bg-muted/20">
