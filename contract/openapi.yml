@@ -1,0 +1,685 @@
+openapi: 3.0.3
+info:
+  title: SubTracker API
+  description: REST API for Hidden B2B Subscriptions & Auto-Charge Waste Tracker
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: http://localhost:8091
+    description: Alternative local port
+
+paths:
+  /api/overview:
+    get:
+      summary: Get overview metrics and dashboard summary
+      operationId: getOverview
+      responses:
+        '200':
+          description: Successful overview metrics response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverviewMetricsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/subscriptions:
+    get:
+      summary: List all detected subscriptions
+      operationId: listSubscriptions
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, candidate, confirmed, dismissed, cancelled]
+        - name: cadence
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BillingInterval'
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/subscriptions/{id}:
+    get:
+      summary: Get subscription detail by ID
+      operationId: getSubscriptionById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscription details with linked transactions and evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      summary: Update subscription details
+      operationId: updateSubscription
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                billingInterval:
+                  $ref: '#/components/schemas/BillingInterval'
+                category:
+                  type: string
+                status:
+                  type: string
+                  enum: [active, candidate, confirmed, dismissed, cancelled]
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/findings:
+    get:
+      summary: List all waste finder hypothesis findings
+      operationId: listFindings
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, confirmed_waste, marked_useful, snoozed, dismissed]
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/FindingType'
+      responses:
+        '200':
+          description: List of findings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FindingResponse'
+
+  /api/findings/{id}/action:
+    post:
+      summary: Apply a user review decision to a finding
+      operationId: applyFindingAction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindingActionRequest'
+      responses:
+        '200':
+          description: Updated finding with applied review action
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindingResponse'
+        '400':
+          description: Invalid action input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Finding not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/renewals:
+    get:
+      summary: List upcoming renewals timeline
+      operationId: listRenewals
+      parameters:
+        - name: highSpendOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of renewals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RenewalResponse'
+
+  /api/connections:
+    get:
+      summary: List all bank and email data connections
+      operationId: listConnections
+      responses:
+        '200':
+          description: List of connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConnectionResponse'
+
+  /api/connections/sync:
+    post:
+      summary: Trigger synchronization of connected data sources
+      operationId: triggerConnectionsSync
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                connectionId:
+                  type: string
+      responses:
+        '200':
+          description: Synchronization triggered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: synced
+                  syncedAt:
+                    type: string
+                    format: date-time
+
+  /api/connections/{id}/disconnect:
+    post:
+      summary: Disconnect a connected data source
+      operationId: disconnectConnection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deleteData:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Connection disconnected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '404':
+          description: Connection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/user/data:
+    delete:
+      summary: Permanently delete all imported transactions, email evidence, and findings
+      operationId: deleteUserData
+      responses:
+        '204':
+          description: Data permanently purged
+        '500':
+          description: Server error during purge
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Money:
+      type: object
+      required:
+        - amountMinor
+        - currency
+      properties:
+        amountMinor:
+          type: integer
+          description: Amount in minor currency units (e.g. cents)
+          example: 4900
+        currency:
+          type: string
+          description: ISO 4217 3-letter currency code
+          example: USD
+
+    BillingInterval:
+      type: string
+      enum: [weekly, monthly, quarterly, annual, irregular]
+      example: monthly
+
+    FindingType:
+      type: string
+      enum:
+        - forgotten_charge
+        - trial_conversion
+        - price_increase
+        - duplicate_service
+        - renewal_approaching
+      example: duplicate_service
+
+    UserDecision:
+      type: string
+      enum:
+        - confirmed_waste
+        - marked_useful
+        - snoozed
+        - dismissed
+      example: confirmed_waste
+
+    FindingActionRequest:
+      type: object
+      required:
+        - decision
+      properties:
+        decision:
+          $ref: '#/components/schemas/UserDecision'
+        note:
+          type: string
+          example: Canceling duplicate license
+        snoozeDays:
+          type: integer
+          default: 30
+
+    BillingEvidenceResponse:
+      type: object
+      required:
+        - id
+        - subscriptionId
+        - senderDomain
+        - subject
+        - receivedAt
+        - confidence
+      properties:
+        id:
+          type: string
+          example: ev_adobe_1
+        subscriptionId:
+          type: string
+          example: sub_adobe
+        senderDomain:
+          type: string
+          example: adobe.com
+        subject:
+          type: string
+          example: Creative Cloud Renewal Notice
+        receivedAt:
+          type: string
+          format: date-time
+        snippet:
+          type: string
+          example: Your plan renewed for $59.99
+        extractedAmountMinor:
+          type: integer
+          example: 5999
+        confidence:
+          type: number
+          format: float
+          example: 0.94
+
+    TransactionResponse:
+      type: object
+      required:
+        - id
+        - connectionId
+        - accountName
+        - date
+        - descriptionRaw
+        - amount
+        - status
+        - isRecurringCandidate
+      properties:
+        id:
+          type: string
+          example: tx_1
+        connectionId:
+          type: string
+          example: conn_bank_1
+        accountName:
+          type: string
+          example: Chase Business Checking
+        date:
+          type: string
+          format: date
+          example: '2026-10-02'
+        descriptionRaw:
+          type: string
+          example: AMAZON WEB SERVICES AWS.AMAZON.CO
+        merchantNormalized:
+          type: string
+          example: Amazon Web Services
+        amount:
+          $ref: '#/components/schemas/Money'
+        status:
+          type: string
+          enum: [posted, pending]
+          example: posted
+        isRecurringCandidate:
+          type: boolean
+          example: true
+
+    SubscriptionResponse:
+      type: object
+      required:
+        - id
+        - name
+        - category
+        - status
+        - billingInterval
+        - amount
+        - monthlyEquivalent
+        - confidence
+        - lastChargeDate
+      properties:
+        id:
+          type: string
+          example: sub_figma
+        name:
+          type: string
+          example: Figma Professional
+        vendorDomain:
+          type: string
+          example: figma.com
+        category:
+          type: string
+          example: Design
+        status:
+          type: string
+          enum: [active, candidate, confirmed, dismissed, cancelled]
+          example: active
+        billingInterval:
+          $ref: '#/components/schemas/BillingInterval'
+        amount:
+          $ref: '#/components/schemas/Money'
+        monthlyEquivalent:
+          $ref: '#/components/schemas/Money'
+        nextRenewalDate:
+          type: string
+          format: date
+          example: '2026-10-27'
+        confidence:
+          type: number
+          format: float
+          example: 0.97
+        explanation:
+          type: string
+          example: 6 monthly charges ~30 days apart with matching invoice emails.
+        lastChargeDate:
+          type: string
+          format: date
+          example: '2026-09-27'
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillingEvidenceResponse'
+
+    FindingResponse:
+      type: object
+      required:
+        - id
+        - subscriptionId
+        - subscriptionName
+        - type
+        - severity
+        - status
+        - title
+        - explanation
+        - potentialSavings
+        - createdAt
+      properties:
+        id:
+          type: string
+          example: fnd_dup
+        subscriptionId:
+          type: string
+          example: sub_adobe
+        subscriptionName:
+          type: string
+          example: Adobe Creative Cloud
+        type:
+          $ref: '#/components/schemas/FindingType'
+        severity:
+          type: string
+          enum: [low, medium, high]
+          example: high
+        status:
+          type: string
+          enum: [open, confirmed_waste, marked_useful, snoozed, dismissed]
+          example: open
+        title:
+          type: string
+          example: Two design suites billed in parallel
+        explanation:
+          type: string
+          example: Adobe Creative Cloud and Figma Professional both charge monthly in the Design category.
+        potentialSavings:
+          $ref: '#/components/schemas/Money'
+        confirmedSavings:
+          $ref: '#/components/schemas/Money'
+        decision:
+          $ref: '#/components/schemas/UserDecision'
+        decisionNote:
+          type: string
+        decisionAt:
+          type: string
+          format: date-time
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/BillingEvidenceResponse'
+        createdAt:
+          type: string
+          format: date-time
+
+    RenewalResponse:
+      type: object
+      required:
+        - id
+        - subscriptionId
+        - vendorName
+        - amount
+        - dueDate
+        - cadence
+        - evidenceTag
+        - hasReminder
+        - timeWindow
+      properties:
+        id:
+          type: string
+          example: ren_notion
+        subscriptionId:
+          type: string
+          example: sub_notion
+        vendorName:
+          type: string
+          example: Notion Plus
+        amount:
+          $ref: '#/components/schemas/Money'
+        dueDate:
+          type: string
+          format: date
+          example: '2026-10-22'
+        cadence:
+          $ref: '#/components/schemas/BillingInterval'
+        evidenceTag:
+          type: string
+          example: Confirmed via Gmail invoice
+        hasReminder:
+          type: boolean
+          example: false
+        timeWindow:
+          type: string
+          enum: [next_7_days, next_30_days, later_this_quarter]
+          example: next_7_days
+
+    ConnectionResponse:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - provider
+        - status
+        - lastSyncedAt
+      properties:
+        id:
+          type: string
+          example: conn_bank_1
+        name:
+          type: string
+          example: Chase Business Checking
+        type:
+          type: string
+          enum: [bank, email]
+          example: bank
+        provider:
+          type: string
+          example: plaid
+        status:
+          type: string
+          enum: [connected, syncing, error, disconnected]
+          example: connected
+        lastSyncedAt:
+          type: string
+          format: date-time
+        accountMask:
+          type: string
+          example: '••••4821'
+        emailAddress:
+          type: string
+          format: email
+          example: alex@studio.dev
+
+    OverviewMetricsResponse:
+      type: object
+      required:
+        - monthlyRecurringSpend
+        - annualizedSpend
+        - activeSubscriptionCount
+        - potentialSavings
+        - confirmedSavings
+        - openFindingsCount
+        - upcomingRenewalsCount
+      properties:
+        monthlyRecurringSpend:
+          $ref: '#/components/schemas/Money'
+        annualizedSpend:
+          $ref: '#/components/schemas/Money'
+        activeSubscriptionCount:
+          type: integer
+          example: 8
+        potentialSavings:
+          $ref: '#/components/schemas/Money'
+        confirmedSavings:
+          $ref: '#/components/schemas/Money'
+        openFindingsCount:
+          type: integer
+          example: 5
+        upcomingRenewalsCount:
+          type: integer
+          example: 2
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: not_found
+        message:
+          type: string
+          example: The requested resource was not found
+        details:
+          type: object
