@@ -48,6 +48,7 @@ class TransactionResponse(BaseModel):
     amount: Money
     status: Literal["posted", "pending"]
     isRecurringCandidate: bool
+    subscriptionId: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

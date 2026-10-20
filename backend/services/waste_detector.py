@@ -37,7 +37,7 @@ def generate_waste_findings(
 
     # 1. Price Increase Detection
     for sub in subscriptions:
-        txs = sub.transactions or [t for t in (transactions or []) if t.subscriptionId == sub.id]
+        txs = sub.transactions or [t for t in (transactions or []) if getattr(t, "subscriptionId", None) == sub.id]
         if len(txs) >= 2:
             amounts = [abs(t.amount.amountMinor) for t in txs]
             if amounts[-1] > amounts[0]:

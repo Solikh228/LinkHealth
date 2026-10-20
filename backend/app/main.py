@@ -11,6 +11,8 @@ from .routers import (
 )
 from routers.overview import router as overview_router
 from routers.subscriptions import router as contract_subscriptions_router
+from routers.findings import router as contract_findings_router
+from routers.connections import router as contract_connections_router
 
 app = FastAPI(
     title="SubTracker API",
@@ -27,9 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Contract routers for overview and subscriptions
+# Contract routers
 app.include_router(overview_router)
 app.include_router(contract_subscriptions_router)
+app.include_router(contract_findings_router)
+app.include_router(contract_connections_router)
 
 # Include routers at root level
 app.include_router(auth_router)

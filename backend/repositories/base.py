@@ -39,6 +39,15 @@ class SubscriptionRepository(ABC):
         pass
 
 
+    @abstractmethod
+    def add(self, subscription: SubscriptionResponse) -> SubscriptionResponse:
+        pass
+
+    @abstractmethod
+    def clear(self) -> None:
+        pass
+
+
 class FindingRepository(ABC):
     @abstractmethod
     def list(
@@ -53,11 +62,19 @@ class FindingRepository(ABC):
         pass
 
     @abstractmethod
+    def add(self, finding: FindingResponse) -> FindingResponse:
+        pass
+
+    @abstractmethod
     def apply_action(
         self,
         finding_id: str,
         action: FindingActionRequest,
     ) -> Optional[FindingResponse]:
+        pass
+
+    @abstractmethod
+    def clear(self) -> None:
         pass
 
 
@@ -74,6 +91,10 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     def add(self, transaction: TransactionResponse) -> TransactionResponse:
+        pass
+
+    @abstractmethod
+    def clear(self) -> None:
         pass
 
 

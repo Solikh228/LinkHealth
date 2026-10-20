@@ -74,6 +74,15 @@ class InMemorySubscriptionRepository(SubscriptionRepository):
             self._subs[subscription_id] = updated
             return updated
 
+    def add(self, subscription: SubscriptionResponse) -> SubscriptionResponse:
+        with self._lock:
+            self._subs[subscription.id] = subscription
+            return subscription
+
+    def clear(self) -> None:
+        with self._lock:
+            self._subs.clear()
+
 
 class InMemoryFindingRepository(FindingRepository):
     def __init__(self, data: Optional[Dict[str, FindingResponse]] = None):
@@ -117,6 +126,15 @@ class InMemoryFindingRepository(FindingRepository):
             self._findings[finding_id] = updated
             return updated
 
+    def add(self, finding: FindingResponse) -> FindingResponse:
+        with self._lock:
+            self._findings[finding.id] = finding
+            return finding
+
+    def clear(self) -> None:
+        with self._lock:
+            self._findings.clear()
+
 
 class InMemoryTransactionRepository(TransactionRepository):
     def __init__(self, data: Optional[List[TransactionResponse]] = None):
@@ -142,6 +160,10 @@ class InMemoryTransactionRepository(TransactionRepository):
         with self._lock:
             self._txs.append(transaction)
             return transaction
+
+    def clear(self) -> None:
+        with self._lock:
+            self._txs.clear()
 
 
 class InMemoryConnectionRepository(ConnectionRepository):
