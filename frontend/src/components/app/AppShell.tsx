@@ -4,11 +4,12 @@ import { LayoutDashboard, Repeat, AlertTriangle, ReceiptText, Plug, Settings } f
 import type { ReactNode } from "react";
 import { API_MODE } from "@/lib/api/client";
 import { findingsQuery, meQuery } from "@/lib/api/queries";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const nav = [
   { to: "/", label: "Overview", icon: LayoutDashboard },
   { to: "/subscriptions", label: "Subscriptions", icon: Repeat },
-  { to: "/findings", label: "Findings", icon: AlertTriangle },
+  { to: "/findings", label: "Waste Finder", icon: AlertTriangle },
   { to: "/transactions", label: "Transactions", icon: ReceiptText },
   { to: "/integrations", label: "Connections", icon: Plug },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -17,12 +18,14 @@ const nav = [
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: open } = useQuery(findingsQuery({ status: "open" }));
   const { data: me } = useQuery(meQuery());
+  const initials = (me?.email ?? "Alex")[0].toUpperCase();
+
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
         <div className="px-6 pb-8 pt-7">
-          <div className="font-display text-3xl leading-none text-sidebar-accent-foreground">Ledgerline</div>
-          <div className="mt-1 text-xs uppercase tracking-[0.2em] text-sidebar-foreground/60">Recurring charge audit</div>
+          <div className="font-display text-3xl leading-none text-sidebar-accent-foreground">SubTracker</div>
+          <div className="mt-1 text-xs uppercase tracking-[0.2em] text-sidebar-foreground/60">Subscription & Waste Audit</div>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 px-3">
           {nav.map(({ to, label, icon: Icon }) => (
@@ -40,16 +43,31 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="border-t border-sidebar-border px-6 py-4 text-xs text-sidebar-foreground/60">
-          <div className="truncate">{me?.email ?? "…"}</div>
-          {API_MODE === "mock" ? (
-            <div className="mt-1 text-sidebar-primary">Mock backend</div>
-          ) : (
-            <div className="mt-1 font-mono text-[11px] text-sidebar-foreground/60">Backend: SQLite (:8091)</div>
-          )}
+        <div className="border-t border-sidebar-border px-6 py-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-8">
+              <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-medium text-sidebar-foreground">{me?.email ?? "alex@studio.dev"}</div>
+              {API_MODE === "mock" ? (
+                <div className="text-[11px] text-sidebar-primary">Mock backend</div>
+              ) : (
+                <div className="font-mono text-[11px] text-sidebar-foreground/50">Backend: SQLite (:8091)</div>
+              )}
+            </div>
+          </div>
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-between border-b bg-card px-4 py-3 md:hidden">
+          <div className="font-display text-2xl font-bold">SubTracker</div>
+          <Avatar className="size-8">
+            <AvatarFallback className="bg-muted text-xs font-medium">{initials}</AvatarFallback>
+          </Avatar>
+        </header>
         <nav className="flex gap-1 overflow-x-auto border-b bg-card px-3 py-2 md:hidden">
           {nav.map(({ to, label }) => (
             <Link key={to} to={to} activeOptions={{ exact: to === "/" }} className="whitespace-nowrap rounded px-3 py-1.5 text-sm text-muted-foreground data-[status=active]:bg-ink data-[status=active]:text-ink-foreground">
