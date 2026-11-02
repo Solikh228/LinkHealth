@@ -25,20 +25,27 @@ FROM python:3.12-slim-bookworm
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
-    STATIC_DIR=/app/backend/static
+    STATIC_DIR=/app/backend/static \
+    PATH="/app/backend/.venv/bin:$PATH"
+
+# Install curl and libpq runtime library
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast backend dependency management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-WORKDIR /app
-
-# 1. Install backend dependencies
-COPY backend/pyproject.toml backend/uv.lock /app/backend/
 WORKDIR /app/backend
-RUN uv sync --frozen --no-cache
 
-# 2. Copy backend source code
+# 1. Install backend dependencies cleanly without frozen lockfile constraint
+COPY backend/pyproject.toml backend/uv.lock* backend/README.md* /app/backend/
+RUN uv sync --no-install-project --no-cache
+
+# 2. Copy backend source code and sync project
 COPY backend/ /app/backend/
+RUN uv sync --no-cache
 
 # 3. Copy compiled static frontend assets from stage 1
 COPY --from=frontend-builder /app/frontend/.output/public /app/backend/static
