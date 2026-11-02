@@ -28,9 +28,11 @@ _load_env_file(BACKEND_DIR.parent / ".env")
 DEFAULT_DB_FILE = BACKEND_DIR / "subtracker.db"
 DATABASE_URL = os.getenv("LEGACY_DATABASE_URL", f"sqlite:///{DEFAULT_DB_FILE}")
 
-# Normalization for legacy postgres:// URLs
+# Normalization for legacy postgres:// and postgresql:// URLs to psycopg2
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "subtracker-super-secret-jwt-key-2026")
 JWT_ALGORITHM = "HS256"

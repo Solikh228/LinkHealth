@@ -12,8 +12,11 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     DATABASE_URL = "sqlite:///./app.db"
 elif DATABASE_URL.startswith("postgres://"):
-    # Normalize legacy postgres:// scheme to postgresql:// for SQLAlchemy
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    # Normalize legacy postgres:// scheme to postgresql+psycopg2:// for SQLAlchemy
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
+    # Explicitly use psycopg2 driver when postgresql:// is provided
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 connect_args = {}
 engine_kwargs = {
