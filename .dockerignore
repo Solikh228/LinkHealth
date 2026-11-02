@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+node_modules
+**/node_modules
+.venv
+**/venv
+**/env
+
+# Python caches and testing
+__pycache__
+**/*.py[cod]
+*$py.class
+.pytest_cache
+**/.pytest_cache
+
+# Frontend build artifacts and caches
+dist
+build
+.output
+**/.output
+.wrangler
+frontend/tmp
+.tanstack
+
+# Database and local state
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+app.db
+subtracker.db
+
+# Environment variables
+.env.local
+
+# IDE & OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db

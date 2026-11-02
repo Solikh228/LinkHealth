@@ -1,4 +1,4 @@
-.PHONY: run dev backend frontend test test-backend test-frontend install build openapi help
+.PHONY: run dev backend frontend test test-backend test-frontend install build openapi docker-build docker-run help
 
 help:
 	@echo "Available commands:"
@@ -12,6 +12,8 @@ help:
 	@echo "  make install      - Install all dependencies (uv sync & npm install)"
 	@echo "  make build        - Build frontend application"
 	@echo "  make openapi      - Re-export openapi.yaml specification"
+	@echo "  make docker-build - Build fullstack Docker image"
+	@echo "  make docker-run   - Run fullstack Docker container"
 
 run:
 	cd backend && uv run uvicorn backend.main:app --reload --port 8091
@@ -39,3 +41,9 @@ build:
 
 openapi:
 	cd backend && uv run python scripts/export_openapi.py
+
+docker-build:
+	docker build -t fullstack-app:latest .
+
+docker-run:
+	docker run -p 8080:8080 -p 8091:8091 fullstack-app:latest
