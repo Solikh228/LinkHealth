@@ -5,8 +5,8 @@ FROM node:20-bookworm-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
-# Install dependencies with caching
-COPY frontend/package.json frontend/package-lock.json* ./
+# Install dependencies cleanly for Linux
+COPY frontend/package.json ./
 RUN npm install --include=optional
 
 # Copy frontend source code

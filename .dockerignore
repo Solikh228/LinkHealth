@@ -1,7 +1,3 @@
-# Git
-.git
-.gitignore
-
 # Dependencies
 node_modules
 **/node_modules
@@ -9,23 +5,28 @@ node_modules
 **/venv
 **/env
 
-# Python caches and testing
+# Git & Repository
+.git
+.gitignore
+
+# Frontend build artifacts & local caches
+dist
+build
+.output
+**/.output
+frontend/package-lock.json
+frontend/tmp
+.tanstack
+.wrangler
+
+# Python caches and test artifacts
 __pycache__
 **/*.py[cod]
 *$py.class
 .pytest_cache
 **/.pytest_cache
 
-# Frontend build artifacts and caches
-dist
-build
-.output
-**/.output
-.wrangler
-frontend/tmp
-.tanstack
-
-# Database and local state
+# Database & local state
 *.db
 *.db-shm
 *.db-wal
@@ -33,10 +34,8 @@ frontend/tmp
 app.db
 subtracker.db
 
-# Environment variables
+# Environment & IDE
 .env.local
-
-# IDE & OS files
 .vscode
 .idea
 .DS_Store
