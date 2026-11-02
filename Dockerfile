@@ -26,7 +26,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
     STATIC_DIR=/app/backend/static \
-    PATH="/app/backend/.venv/bin:$PATH"
+    PATH="/app/backend/.venv/bin:$PATH" \
+    PYTHONPATH="/app/backend"
 
 # Install curl and libpq runtime library
 RUN apt-get update && apt-get install -y --no-install-recommends \

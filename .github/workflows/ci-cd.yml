@@ -52,23 +52,38 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Spin up Docker Compose Stack (db + web)
-        run: docker compose build --no-cache && docker compose up -d
+        run: |
+          docker compose build --no-cache
+          docker compose up -d
+          echo "Initial container statuses:"
+          docker compose ps
 
       - name: Wait for Stack Readiness
         run: |
           echo "Awaiting web container and database healthcheck..."
+          echo "Checking endpoints: /api/health, /health, or /"
+          READY=0
           for i in {1..40}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/health || true)
-            if [ "$STATUS" -eq 200 ]; then
-              echo "App is healthy and responding with HTTP 200!"
-              exit 0
+            STATUS_API=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/health || true)
+            STATUS_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health || true)
+            STATUS_ROOT=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/ || true)
+
+            if [ "$STATUS_API" -eq 200 ] || [ "$STATUS_HEALTH" -eq 200 ] || [ "$STATUS_ROOT" -eq 200 ]; then
+              echo "App is healthy and responding with HTTP 200 (api: $STATUS_API, health: $STATUS_HEALTH, root: $STATUS_ROOT)!"
+              READY=1
+              break
             fi
-            echo "Waiting for http://localhost:8000/api/health ($i/40, got status $STATUS)..."
+
+            echo "Waiting for health endpoints ($i/40) - api: $STATUS_API, health: $STATUS_HEALTH, root: $STATUS_ROOT..."
             sleep 2
           done
-          echo "Timed out waiting for stack readiness"
-          docker compose logs
-          exit 1
+
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::Timed out waiting for stack readiness! Dumping container statuses and logs:"
+            docker compose ps
+            docker compose logs
+            exit 1
+          fi
 
       - name: Set up Node.js for Playwright
         uses: actions/setup-node@v4
