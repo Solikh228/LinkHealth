@@ -1,53 +1,50 @@
-# Multi-service container image for SubTracker Fullstack App
+# ==============================================================================
+# Stage 1: Build the frontend into static assets
+# ==============================================================================
+FROM node:20-bookworm-slim AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Install dependencies with caching
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci || npm install
+
+# Copy frontend source code
+COPY frontend/ ./
+
+# Build frontend and generate static index.html into .output/public
+ENV VITE_API_MODE=http
+ENV VITE_API_BASE_URL=""
+RUN npm run build
+
+# ==============================================================================
+# Stage 2: Final minimal production image running FastAPI backend
+# ==============================================================================
 FROM python:3.12-slim-bookworm
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONUNBUFFERED=1 \
+ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    NODE_ENV=development
+    PORT=8000 \
+    STATIC_DIR=/app/backend/static
 
-# Install system dependencies, curl, and Node.js (v20)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    gnupg \
-    bash \
-    && mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends nodejs \
-    && apt-get purge -y --auto-remove gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install uv for fast backend package management
+# Install uv for fast backend dependency management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-# 1. Cache & install backend dependencies
+# 1. Install backend dependencies
 COPY backend/pyproject.toml backend/uv.lock /app/backend/
 WORKDIR /app/backend
 RUN uv sync --frozen --no-cache
 
-# 2. Cache & install frontend dependencies
-WORKDIR /app/frontend
-COPY frontend/package.json frontend/package-lock.json* /app/frontend/
-RUN npm install
+# 2. Copy backend source code
+COPY backend/ /app/backend/
 
-# 3. Copy application source code
-WORKDIR /app
-COPY backend /app/backend
-COPY frontend /app/frontend
-COPY openapi.yaml Makefile /app/
+# 3. Copy compiled static frontend assets from stage 1
+COPY --from=frontend-builder /app/frontend/.output/public /app/backend/static
 
-# 4. Copy and configure entrypoint script
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Expose single port for both API and static frontend UI
+EXPOSE 8000
 
-# Expose ports:
-# 8080: Frontend Web Application
-# 8091: Backend REST API
-EXPOSE 8080 8091
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Start FastAPI serving on single port 8000
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

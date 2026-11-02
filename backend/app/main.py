@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .routers import (
     auth_router,
@@ -31,6 +34,52 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Static directory for serving pre-built frontend SPA
+STATIC_DIR = os.getenv("STATIC_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "static"))
+
+if os.path.isdir(STATIC_DIR):
+    assets_dir = os.path.join(STATIC_DIR, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+
+@app.middleware("http")
+async def spa_fallback_middleware(request: Request, call_next):
+    accept = request.headers.get("accept", "")
+    path = request.url.path
+
+    # If it's a browser requesting an HTML page for non-API routes, return index.html
+    if (
+        request.method == "GET"
+        and "text/html" in accept
+        and not path.startswith(("/api", "/docs", "/openapi.json", "/health"))
+        and os.path.isdir(STATIC_DIR)
+    ):
+        direct_file = os.path.join(STATIC_DIR, path.lstrip("/"))
+        if path != "/" and os.path.isfile(direct_file):
+            return FileResponse(direct_file)
+        index_html = os.path.join(STATIC_DIR, "index.html")
+        if os.path.isfile(index_html):
+            return FileResponse(index_html)
+
+    response = await call_next(request)
+
+    # If 404 on GET and not an API/docs route, check direct static file or fallback to index.html
+    if (
+        response.status_code == 404
+        and request.method == "GET"
+        and not path.startswith(("/api", "/docs", "/openapi.json", "/health"))
+        and os.path.isdir(STATIC_DIR)
+    ):
+        direct_file = os.path.join(STATIC_DIR, path.lstrip("/"))
+        if os.path.isfile(direct_file):
+            return FileResponse(direct_file)
+        index_html = os.path.join(STATIC_DIR, "index.html")
+        if os.path.isfile(index_html):
+            return FileResponse(index_html)
+
+    return response
 
 # Contract routers
 app.include_router(overview_router)

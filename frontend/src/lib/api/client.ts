@@ -117,5 +117,12 @@ function createHttpApi(baseUrl: string): ApiClient {
 const mode = import.meta.env["VITE_API_MODE"] ?? "http";
 export const API_MODE: "mock" | "http" = mode === "mock" ? "mock" : "http";
 
+const defaultBaseUrl =
+  import.meta.env["VITE_API_BASE_URL"] !== undefined
+    ? import.meta.env["VITE_API_BASE_URL"]
+    : import.meta.env.DEV
+      ? "http://localhost:8091"
+      : "";
+
 export const api: ApiClient =
-  API_MODE === "http" ? createHttpApi(import.meta.env["VITE_API_BASE_URL"] ?? "http://localhost:8091") : mockApi;
+  API_MODE === "http" ? createHttpApi(defaultBaseUrl) : mockApi;

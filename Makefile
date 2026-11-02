@@ -46,4 +46,4 @@ docker-build:
 	docker build -t fullstack-app:latest .
 
 docker-run:
-	docker run -p 8080:8080 -p 8091:8091 fullstack-app:latest
+	docker run -p 8000:8000 fullstack-app:latest

@@ -6,10 +6,7 @@ services:
     image: fullstack-app:latest
     container_name: fullstack-app
     ports:
-      - "8080:8080"
-      - "8091:8091"
+      - "8000:8000"
     environment:
       - DATABASE_URL=sqlite:///./app.db
-      - VITE_API_MODE=http
-      - VITE_API_BASE_URL=http://localhost:8091
     restart: unless-stopped
