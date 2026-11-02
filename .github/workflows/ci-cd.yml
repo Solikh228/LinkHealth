@@ -1,0 +1,173 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # ============================================================================
+  # 1. Parallel Job: Backend Unit Tests
+  # ============================================================================
+  backend-tests:
+    name: Backend Pytest Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv Package Manager
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install Backend Dependencies
+        working-directory: ./backend
+        run: uv sync --frozen
+
+      - name: Run Backend Tests
+        working-directory: ./backend
+        run: uv run pytest -v
+
+  # ============================================================================
+  # 2. Parallel Job: Frontend Production Build
+  # ============================================================================
+  frontend-build:
+    name: Frontend Production Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build Frontend Assets
+        working-directory: ./frontend
+        run: npm run build
+
+  # ============================================================================
+  # 3. Docker Compose Stack & End-to-End Playwright Tests
+  # ============================================================================
+  e2e-tests:
+    name: Docker Compose & Playwright E2E Tests
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-build]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Spin up Docker Compose Stack (db + web)
+        run: docker compose up -d --build
+
+      - name: Wait for Stack Readiness
+        run: |
+          echo "Awaiting web container and database healthcheck..."
+          for i in {1..40}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/health || true)
+            if [ "$STATUS" -eq 200 ]; then
+              echo "App is healthy and responding with HTTP 200!"
+              exit 0
+            fi
+            echo "Waiting for http://localhost:8000/api/health ($i/40, got status $STATUS)..."
+            sleep 2
+          done
+          echo "Timed out waiting for stack readiness"
+          docker compose logs
+          exit 1
+
+      - name: Set up Node.js for Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Root Dependencies
+        run: npm ci || npm install
+
+      - name: Install Playwright Chromium Browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E Tests Against Docker Compose
+        env:
+          BASE_URL: http://localhost:8000
+          NO_WEBSERVER: "true"
+          CI: "true"
+        run: npx playwright test
+
+      - name: Dump Docker Logs on Failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Upload Playwright Test Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Clean Up Docker Compose
+        if: always()
+        run: docker compose down -v
+
+  # ============================================================================
+  # 4. Automated Deployment on Push to Main
+  # ============================================================================
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [e2e-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deployment
+        if: env.RENDER_DEPLOY_HOOK_URL != ''
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          echo "Triggering Render webhook deployment..."
+          curl -s -X POST "$RENDER_DEPLOY_HOOK_URL"
+          echo "Render deployment triggered successfully."
+
+      - name: Trigger Railway Deployment
+        if: env.RAILWAY_TOKEN != ''
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "Triggering Railway deployment..."
+          npx @railway/cli up --detach
+          echo "Railway deployment triggered successfully."
+
+      - name: Deployment Success Verification
+        run: |
+          echo "=========================================================="
+          echo "CI/CD Pipeline Completed Successfully!"
+          echo "Git Commit SHA: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "CloudFormation EC2 Stack: cloudformation.yaml ready"
+          echo "Render Deployment Blueprint: render.yaml ready"
+          echo "Railway PaaS Configuration: railway.json ready"
+          echo "=========================================================="

@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Production AWS CloudFormation Template for SubTracker Full-Stack Application.
+  Provisions an EC2 instance within the AWS Free Tier (t2.micro / t3.micro, 20GB gp3 storage)
+  running Docker Compose with Caddy (automatic HTTPS reverse proxy), multi-stage app container,
+  and PostgreSQL 16.
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t2.micro
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: EC2 instance type (t2.micro and t3.micro are eligible for AWS Free Tier).
+
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64'
+    Description: Amazon Linux 2023 AMI dynamically retrieved via AWS Systems Manager Parameter Store.
+
+  KeyName:
+    Type: String
+    Default: ''
+    Description: Optional EC2 Key Pair for SSH access. Leave empty to manage via AWS Systems Manager Session Manager.
+
+  DomainName:
+    Type: String
+    Default: ''
+    Description: Optional custom domain name for Caddy automatic TLS/HTTPS certificates (e.g. subtracker.example.com).
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Default: 'SubTrackerSecurePass2026!'
+    Description: PostgreSQL master user password.
+
+  GitRepoUrl:
+    Type: String
+    Default: 'https://github.com/Solikh228/LinkHealth.git'
+    Description: Git repository to clone and orchestrate with Docker Compose.
+
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, '']]
+  HasDomainName: !Not [!Equals [!Ref DomainName, '']]
+
+Resources:
+  # Security Group allowing HTTP (80), HTTPS (443), and SSH (22)
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for SubTracker production instance
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP (Caddy ACME challenge & HTTP redirect)
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS (Caddy TLS traffic)
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH remote access
+      Tags:
+        - Key: Name
+          Value: subtracker-security-group
+
+  # IAM Role granting AWS SSM Session Manager access (allows secure shell without open SSH keys)
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Name
+          Value: subtracker-instance-role
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  # EC2 Free Tier Instance running Docker Compose + Caddy + App + PostgreSQL
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: subtracker-production-server
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+          echo "=== 1. Updating base packages ==="
+          dnf update -y
+
+          echo "=== 2. Installing Docker and Git ==="
+          dnf install -y docker git
+          systemctl enable --now docker
+          usermod -aG docker ec2-user
+
+          echo "=== 3. Installing Docker Compose Plugin ==="
+          DOCKER_CONFIG=/usr/libexec/docker/cli-plugins
+          mkdir -p $DOCKER_CONFIG
+          curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/docker-compose
+          chmod +x $DOCKER_CONFIG/docker-compose
+
+          echo "=== 4. Setting up Application Directory ==="
+          mkdir -p /opt/app
+          cd /opt/app
+
+          echo "Cloning repository: ${GitRepoUrl}"
+          git clone ${GitRepoUrl} . || {
+            echo "Clone failed or directory non-empty; pulling latest..."
+            git pull origin main || true
+          }
+
+          echo "=== 5. Writing Production Environment and Caddy Configuration ==="
+          cat <<EOF > /opt/app/.env
+          POSTGRES_USER=user
+          POSTGRES_PASSWORD=${DBPassword}
+          POSTGRES_DB=appdb
+          DATABASE_URL=postgresql://user:${DBPassword}@db:5432/appdb
+          EOF
+
+          DOMAIN="${DomainName}"
+          if [ -n "$DOMAIN" ]; then
+            cat <<EOF > /opt/app/Caddyfile
+          $DOMAIN {
+              encode zstd gzip
+              reverse_proxy web:8000 {
+                  header_up Host {host}
+                  header_up X-Real-IP {remote_host}
+                  header_up X-Forwarded-For {remote_host}
+                  header_up X-Forwarded-Proto {scheme}
+              }
+          }
+          EOF
+          else
+            cat <<EOF > /opt/app/Caddyfile
+          :80, :443 {
+              encode zstd gzip
+              reverse_proxy web:8000 {
+                  header_up Host {host}
+                  header_up X-Real-IP {remote_host}
+                  header_up X-Forwarded-For {remote_host}
+                  header_up X-Forwarded-Proto {scheme}
+              }
+          }
+          EOF
+          fi
+
+          echo "=== 6. Creating Systemd Service for Auto-Restart on Boot ==="
+          cat <<EOF > /etc/systemd/system/subtracker.service
+          [Unit]
+          Description=SubTracker Docker Compose Stack
+          Requires=docker.service
+          After=docker.service
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          WorkingDirectory=/opt/app
+          ExecStart=/usr/libexec/docker/cli-plugins/docker-compose -f docker-compose.prod.yml up -d --build
+          ExecStop=/usr/libexec/docker/cli-plugins/docker-compose -f docker-compose.prod.yml down
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          systemctl daemon-reload
+          systemctl enable subtracker.service
+
+          echo "=== 7. Starting Docker Compose Stack ==="
+          /usr/libexec/docker/cli-plugins/docker-compose -f /opt/app/docker-compose.prod.yml up -d --build
+
+          echo "=== Deployment Complete ==="
+
+Outputs:
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref EC2Instance
+
+  PublicIP:
+    Description: Public IPv4 Address of the SubTracker production server
+    Value: !GetAtt EC2Instance.PublicIp
+
+  PublicDNS:
+    Description: Public DNS name of the instance
+    Value: !GetAtt EC2Instance.PublicDnsName
+
+  AppUrl:
+    Description: Web application URL
+    Value: !If
+      - HasDomainName
+      - !Sub 'https://${DomainName}'
+      - !Sub 'http://${EC2Instance.PublicIp}'
+
+  SSMCommand:
+    Description: AWS CLI command to connect directly without SSH keys
+    Value: !Sub 'aws ssm start-session --target ${EC2Instance}'

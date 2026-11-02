@@ -1,0 +1,19 @@
+{
+    # Global options
+    admin off
+}
+
+# Reverse proxy with automatic HTTPS and WebSocket support
+:80, :443 {
+    # Response compression
+    encode zstd gzip
+
+    # Reverse proxy to FastAPI application container
+    reverse_proxy web:8000 {
+        # Preserve headers for WebSocket and real-time collaboration
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}

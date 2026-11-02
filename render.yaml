@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: subtracker-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: subtracker-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+
+databases:
+  - name: subtracker-db
+    plan: free
+    databaseName: appdb
+    user: appuser
+    region: oregon
