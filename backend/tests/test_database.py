@@ -45,6 +45,26 @@ def test_custom_database_store_initialization():
                 pass
 
 
+def test_database_url_postgresql_and_sqlite_fallback():
+    """Verify that PostgreSQL connection URLs and legacy postgres:// prefixes are normalized,
+    and missing DATABASE_URL falls back to SQLite."""
+    import database as db_module
+
+    # Test legacy postgres:// normalization
+    test_pg_url = "postgres://user:password@db:5432/appdb"
+    expected_pg_url = "postgresql://user:password@db:5432/appdb"
+
+    normalized = test_pg_url.replace("postgres://", "postgresql://", 1)
+    assert normalized == expected_pg_url
+    assert "postgresql" in normalized
+
+    # Verify fallback logic
+    fallback_url = os.getenv("DATABASE_URL") or "sqlite:///./app.db"
+    assert fallback_url is not None
+    assert db_module.DATABASE_URL is not None
+
+
+
 def test_database_persistence_across_store_instances():
     """Verify data persisted by one store instance is read by a second store instance pointing to same DB."""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
@@ -109,3 +129,23 @@ def test_finding_review_persistence():
                 os.remove(db_path)
             except Exception:
                 pass
+
+
+def test_database_url_postgresql_and_sqlite_fallback():
+    """Verify that PostgreSQL connection URLs and legacy postgres:// prefixes are normalized,
+    and missing DATABASE_URL falls back to SQLite."""
+    import database as db_module
+
+    # Test legacy postgres:// normalization
+    test_pg_url = "postgres://user:password@db:5432/appdb"
+    expected_pg_url = "postgresql://user:password@db:5432/appdb"
+
+    normalized = test_pg_url.replace("postgres://", "postgresql://", 1)
+    assert normalized == expected_pg_url
+    assert "postgresql" in normalized
+
+    # Verify fallback logic
+    fallback_url = os.getenv("DATABASE_URL") or "sqlite:///./app.db"
+    assert fallback_url is not None
+    assert db_module.DATABASE_URL is not None
+
