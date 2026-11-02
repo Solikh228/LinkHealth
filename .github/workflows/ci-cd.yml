@@ -144,39 +144,48 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check PaaS Configuration
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           echo "Checking deployment targets..."
-          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+          if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
             echo "✓ Render deploy hook secret is present."
           else
             echo "ℹ Render deploy hook secret (RENDER_DEPLOY_HOOK_URL) not configured. Skipping Render deployment."
           fi
 
-          if [ -n "${{ secrets.RAILWAY_TOKEN }}" ]; then
+          if [ -n "$RAILWAY_TOKEN" ]; then
             echo "✓ Railway token secret is present."
           else
             echo "ℹ Railway token secret (RAILWAY_TOKEN) not configured. Skipping Railway deployment."
           fi
 
       - name: Trigger Render Deployment
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
         continue-on-error: true
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
-          echo "Triggering Render webhook deployment..."
-          curl -f -s -X POST "$RENDER_DEPLOY_HOOK_URL" || echo "Warning: Render deploy hook returned non-zero exit code"
-          echo "Render deployment trigger step completed."
+          if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "Triggering Render webhook deployment..."
+            curl -f -s -X POST "$RENDER_DEPLOY_HOOK_URL" || echo "Warning: Render deploy hook returned non-zero exit code"
+            echo "Render deployment trigger step completed."
+          else
+            echo "RENDER_DEPLOY_HOOK_URL not configured. Skipping Render deployment."
+          fi
 
       - name: Trigger Railway Deployment
-        if: ${{ secrets.RAILWAY_TOKEN != '' }}
         continue-on-error: true
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          echo "Triggering Railway deployment..."
-          npx @railway/cli up --detach || echo "Warning: Railway deployment command returned non-zero exit code"
-          echo "Railway deployment trigger step completed."
+          if [ -n "$RAILWAY_TOKEN" ]; then
+            echo "Triggering Railway deployment..."
+            npx @railway/cli up --detach || echo "Warning: Railway deployment command returned non-zero exit code"
+            echo "Railway deployment trigger step completed."
+          else
+            echo "RAILWAY_TOKEN not configured. Skipping Railway deployment."
+          fi
 
       - name: Deployment Success Verification
         run: |
