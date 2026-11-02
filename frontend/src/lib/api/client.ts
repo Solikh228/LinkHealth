@@ -76,14 +76,15 @@ export class ApiError extends Error {
 
 function createHttpApi(baseUrl: string): ApiClient {
   async function req<T>(method: string, path: string, body?: unknown, query?: Record<string, unknown>): Promise<T> {
-    const url = new URL(baseUrl.replace(/\/$/, "") + path);
+    const effectiveBase = baseUrl || (typeof window !== "undefined" ? window.location.origin : "http://localhost:8000");
+    const url = new URL(path, effectiveBase);
     if (query) for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
     const token = tokenStore.get();
     const headers: Record<string, string> = { Accept: "application/json" };
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (token) headers["Authorization"] = `Bearer ${token}`;
     if (method !== "GET") headers["Idempotency-Key"] = crypto.randomUUID();
-    const res = await fetch(url, { method, headers, body: body === undefined ? null : JSON.stringify(body) });
+    const res = await fetch(url.toString(), { method, headers, body: body === undefined ? null : JSON.stringify(body) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       const msg = err.message ?? (typeof err.detail === "string" ? err.detail : res.statusText);
@@ -120,9 +121,9 @@ export const API_MODE: "mock" | "http" = mode === "mock" ? "mock" : "http";
 const defaultBaseUrl =
   import.meta.env["VITE_API_BASE_URL"] !== undefined
     ? import.meta.env["VITE_API_BASE_URL"]
-    : import.meta.env.DEV
-      ? "http://localhost:8091"
-      : "";
+    : typeof window !== "undefined"
+      ? window.location.origin
+      : "http://localhost:8000";
 
 export const api: ApiClient =
   API_MODE === "http" ? createHttpApi(defaultBaseUrl) : mockApi;

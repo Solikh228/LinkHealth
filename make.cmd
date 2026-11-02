@@ -9,6 +9,8 @@ if "%TARGET%"=="dev" goto dev
 if "%TARGET%"=="test" goto test
 if "%TARGET%"=="test-backend" goto test_backend
 if "%TARGET%"=="test-frontend" goto test_frontend
+if "%TARGET%"=="test-e2e" goto test_e2e
+if "%TARGET%"=="e2e" goto test_e2e
 if "%TARGET%"=="install" goto install
 if "%TARGET%"=="build" goto build
 if "%TARGET%"=="openapi" goto openapi
@@ -51,6 +53,11 @@ goto end
 echo Running frontend tests...
 cd /d "%~dp0frontend" && npm.cmd test -- --run
 cd /d "%~dp0"
+goto end
+
+:test_e2e
+echo Running Playwright e2e tests...
+npx.cmd playwright test
 goto end
 
 :install

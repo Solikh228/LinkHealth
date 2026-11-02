@@ -1,0 +1,1 @@
+import{N as e}from"./removable-DYPpnRnO.js";import{t}from"./AppShell-CQNaF1E4.js";import{t as n}from"./WasteFinderPage-D73IhiAF.js";var r=e();function i(){return(0,r.jsx)(t,{children:(0,r.jsx)(n,{})})}export{i as component};

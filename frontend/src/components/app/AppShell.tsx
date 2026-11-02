@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, Repeat, AlertTriangle, ReceiptText, Plug, Settings, Clock } from "lucide-react";
+import { LayoutDashboard, Repeat, AlertTriangle, ReceiptText, Plug, Settings, Clock, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { API_MODE } from "@/lib/api/client";
 import { findingsQuery, meQuery } from "@/lib/api/queries";
@@ -13,6 +13,7 @@ const nav = [
   { to: "/renewals", label: "Renewals", icon: Clock },
   { to: "/transactions", label: "Transactions", icon: ReceiptText },
   { to: "/integrations", label: "Connections", icon: Plug },
+  { to: "/session", label: "Canvas Session", icon: Users },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

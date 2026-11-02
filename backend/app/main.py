@@ -19,6 +19,7 @@ from routers.connections import router as contract_connections_router
 from routers.statements import router as statements_router
 from routers.bank_integrations import router as bank_integrations_router
 from routers.email_integrations import router as email_integrations_router
+from routers.collaboration import router as collaboration_router
 
 app = FastAPI(
     title="SubTracker API",
@@ -75,9 +76,10 @@ async def spa_fallback_middleware(request: Request, call_next):
         direct_file = os.path.join(STATIC_DIR, path.lstrip("/"))
         if os.path.isfile(direct_file):
             return FileResponse(direct_file)
-        index_html = os.path.join(STATIC_DIR, "index.html")
-        if os.path.isfile(index_html):
-            return FileResponse(index_html)
+        if "text/html" in accept:
+            index_html = os.path.join(STATIC_DIR, "index.html")
+            if os.path.isfile(index_html):
+                return FileResponse(index_html)
 
     return response
 
@@ -89,6 +91,7 @@ app.include_router(contract_connections_router)
 app.include_router(statements_router)
 app.include_router(bank_integrations_router)
 app.include_router(email_integrations_router)
+app.include_router(collaboration_router)
 
 # Include routers at root level
 app.include_router(auth_router)

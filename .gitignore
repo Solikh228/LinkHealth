@@ -20,6 +20,10 @@ frontend/tmp/
 env/
 venv/
 
+# Playwright
+test-results/
+playwright-report/
+
 # Database & Environment
 *.db
 *.db-shm

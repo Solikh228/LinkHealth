@@ -10,10 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CanvasRouteImport } from './routes/canvas'
 import { Route as ConnectionsRouteImport } from './routes/connections'
 import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RenewalsRouteImport } from './routes/renewals'
+import { Route as SessionRouteImport } from './routes/session'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as WasteFinderRouteImport } from './routes/waste-finder'
@@ -25,6 +27,11 @@ import { Route as SubscriptionsIdRouteImport } from './routes/subscriptions.$id'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CanvasRoute = CanvasRouteImport.update({
+  id: '/canvas',
+  path: '/canvas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectionsRoute = ConnectionsRouteImport.update({
@@ -45,6 +52,11 @@ const LoginRoute = LoginRouteImport.update({
 const RenewalsRoute = RenewalsRouteImport.update({
   id: '/renewals',
   path: '/renewals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SessionRoute = SessionRouteImport.update({
+  id: '/session',
+  path: '/session',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -85,10 +97,12 @@ const SubscriptionsIdRoute = SubscriptionsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/canvas': typeof CanvasRoute
   '/connections': typeof ConnectionsRoute
   '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
   '/renewals': typeof RenewalsRoute
+  '/session': typeof SessionRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
   '/waste-finder': typeof WasteFinderRoute
@@ -99,10 +113,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/canvas': typeof CanvasRoute
   '/connections': typeof ConnectionsRoute
   '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
   '/renewals': typeof RenewalsRoute
+  '/session': typeof SessionRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
   '/waste-finder': typeof WasteFinderRoute
@@ -114,10 +130,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/canvas': typeof CanvasRoute
   '/connections': typeof ConnectionsRoute
   '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
   '/renewals': typeof RenewalsRoute
+  '/session': typeof SessionRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
   '/waste-finder': typeof WasteFinderRoute
@@ -130,10 +148,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/canvas'
     | '/connections'
     | '/integrations'
     | '/login'
     | '/renewals'
+    | '/session'
     | '/settings'
     | '/transactions'
     | '/waste-finder'
@@ -144,10 +164,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/canvas'
     | '/connections'
     | '/integrations'
     | '/login'
     | '/renewals'
+    | '/session'
     | '/settings'
     | '/transactions'
     | '/waste-finder'
@@ -158,10 +180,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/canvas'
     | '/connections'
     | '/integrations'
     | '/login'
     | '/renewals'
+    | '/session'
     | '/settings'
     | '/transactions'
     | '/waste-finder'
@@ -173,10 +197,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CanvasRoute: typeof CanvasRoute
   ConnectionsRoute: typeof ConnectionsRoute
   IntegrationsRoute: typeof IntegrationsRoute
   LoginRoute: typeof LoginRoute
   RenewalsRoute: typeof RenewalsRoute
+  SessionRoute: typeof SessionRoute
   SettingsRoute: typeof SettingsRoute
   TransactionsRoute: typeof TransactionsRoute
   WasteFinderRoute: typeof WasteFinderRoute
@@ -193,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/canvas': {
+      id: '/canvas'
+      path: '/canvas'
+      fullPath: '/canvas'
+      preLoaderRoute: typeof CanvasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connections': {
@@ -221,6 +254,13 @@ declare module '@tanstack/react-router' {
       path: '/renewals'
       fullPath: '/renewals'
       preLoaderRoute: typeof RenewalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/session': {
+      id: '/session'
+      path: '/session'
+      fullPath: '/session'
+      preLoaderRoute: typeof SessionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -277,10 +317,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CanvasRoute: CanvasRoute,
   ConnectionsRoute: ConnectionsRoute,
   IntegrationsRoute: IntegrationsRoute,
   LoginRoute: LoginRoute,
   RenewalsRoute: RenewalsRoute,
+  SessionRoute: SessionRoute,
   SettingsRoute: SettingsRoute,
   TransactionsRoute: TransactionsRoute,
   WasteFinderRoute: WasteFinderRoute,

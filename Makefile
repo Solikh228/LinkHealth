@@ -1,4 +1,4 @@
-.PHONY: run dev backend frontend test test-backend test-frontend install build openapi docker-build docker-run help
+.PHONY: run dev backend frontend test test-backend test-frontend test-e2e e2e install build openapi docker-build docker-run help
 
 help:
 	@echo "Available commands:"
@@ -9,6 +9,7 @@ help:
 	@echo "  make test         - Run all test suites (backend & frontend)"
 	@echo "  make test-backend - Run backend pytest suite"
 	@echo "  make test-frontend- Run frontend vitest suite"
+	@echo "  make e2e          - Run Playwright end-to-end test suite"
 	@echo "  make install      - Install all dependencies (uv sync & npm install)"
 	@echo "  make build        - Build frontend application"
 	@echo "  make openapi      - Re-export openapi.yaml specification"
@@ -31,6 +32,11 @@ test-backend:
 
 test-frontend:
 	cd frontend && npm test
+
+e2e:
+	npx playwright test
+
+test-e2e: e2e
 
 install:
 	cd backend && uv sync
