@@ -30,6 +30,7 @@ dependencies = [
     "opentelemetry-instrumentation-sqlalchemy>=0.46b0",
     "opentelemetry-instrumentation-logging>=0.46b0",
     "greenlet>=3.5.6",
+    "boto3>=1.44.3",
 ]
 
 [build-system]
