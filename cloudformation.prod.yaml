@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   Production AWS CloudFormation Template for SubTracker Full-Stack Application.
   Provisions an independent, production-grade EC2 instance within the AWS Free Tier (t2.micro / t3.micro, 20GB gp3 storage)
-  running Docker Compose with Caddy (automatic HTTPS reverse proxy), multi-stage app container,
+  running Docker Compose with Caddy (automatic HTTPS reverse proxy), multi-stage app container from Amazon ECR,
   and PostgreSQL 16.
 
 Parameters:
@@ -53,6 +53,19 @@ Parameters:
     Default: 'SubTrackerProdSecurePass2026!'
     Description: PostgreSQL production database master password.
 
+  EcrRepositoryName:
+    Type: String
+    Default: 'subtracker'
+    Description: Name of the Amazon ECR repository for SubTracker container images.
+
+  CreateEcrRepository:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Set to 'true' to provision a dedicated ECR repository in this prod stack (leave 'false' to share dev ECR repository).
+
   GitRepoUrl:
     Type: String
     Default: 'https://github.com/Solikh228/LinkHealth.git'
@@ -66,8 +79,58 @@ Parameters:
 Conditions:
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
   HasDomainName: !Not [!Equals [!Ref DomainName, '']]
+  ShouldCreateEcr: !Equals [!Ref CreateEcrRepository, 'true']
 
 Resources:
+  # Optional Production ECR Repository (if not reusing existing repo)
+  AppRepository:
+    Type: AWS::ECR::Repository
+    Condition: ShouldCreateEcr
+    Properties:
+      RepositoryName: !Ref EcrRepositoryName
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: MUTABLE
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Retain last 30 tagged build images",
+                "selection": {
+                  "tagStatus": "tagged",
+                  "tagPrefixList": ["20"],
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 30
+                },
+                "action": {
+                  "type": "expire"
+                }
+              },
+              {
+                "rulePriority": 2,
+                "description": "Expire untagged images after 7 days",
+                "selection": {
+                  "tagStatus": "untagged",
+                  "countType": "sinceImagePushed",
+                  "countUnit": "days",
+                  "countNumber": 7
+                },
+                "action": {
+                  "type": "expire"
+                }
+              }
+            ]
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub '${EcrRepositoryName}-ecr'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: SubTracker
+
   # Production Security Group allowing HTTP (80), HTTPS (443), and SSH (22)
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -97,10 +160,11 @@ Resources:
         - Key: Project
           Value: SubTracker
 
-  # Production IAM Role granting AWS SSM Session Manager access
+  # Production IAM Role granting AWS SSM Session Manager and Amazon ECR pull access
   InstanceRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: subtracker-prod-instance-role
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -110,6 +174,7 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
       Tags:
         - Key: Name
           Value: subtracker-prod-instance-role
@@ -156,18 +221,32 @@ Resources:
           echo "=== [PROD] 1. Updating base packages ==="
           dnf update -y
 
-          echo "=== [PROD] 2. Installing Docker and Git ==="
-          dnf install -y docker git
+          echo "=== [PROD] 2. Installing Docker, Git, AWS CLI, and ECR Credential Helper ==="
+          dnf install -y docker git aws-cli amazon-ecr-credential-helper || true
           systemctl enable --now docker
           usermod -aG docker ec2-user
 
-          echo "=== [PROD] 3. Installing Docker Compose Plugin ==="
+          echo "=== [PROD] 3. Configuring Docker ECR Credential Store ==="
+          mkdir -p /root/.docker /home/ec2-user/.docker
+          cat <<EOF > /root/.docker/config.json
+          {
+            "credsStore": "ecr-login"
+          }
+          EOF
+          cat <<EOF > /home/ec2-user/.docker/config.json
+          {
+            "credsStore": "ecr-login"
+          }
+          EOF
+          chown -R ec2-user:ec2-user /home/ec2-user/.docker
+
+          echo "=== [PROD] 4. Installing Docker Compose Plugin ==="
           DOCKER_CONFIG=/usr/libexec/docker/cli-plugins
           mkdir -p $DOCKER_CONFIG
           curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/docker-compose
           chmod +x $DOCKER_CONFIG/docker-compose
 
-          echo "=== [PROD] 4. Setting up Application Directory ==="
+          echo "=== [PROD] 5. Setting up Application Directory ==="
           mkdir -p /opt/subtracker-prod
           cd /opt/subtracker-prod
 
@@ -177,7 +256,7 @@ Resources:
             git pull origin ${GitBranch} || true
           }
 
-          echo "=== [PROD] 5. Writing Production Environment and Caddy Configuration ==="
+          echo "=== [PROD] 6. Writing Production Environment and Caddy Configuration ==="
           cat <<EOF > /opt/subtracker-prod/.env
           COMPOSE_PROJECT_NAME=subtracker-prod
           ENVIRONMENT=production
@@ -185,6 +264,7 @@ Resources:
           POSTGRES_PASSWORD=${DBPassword}
           POSTGRES_DB=appdb_prod
           DATABASE_URL=postgresql://prod_user:${DBPassword}@db:5432/appdb_prod
+          APP_IMAGE=${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepositoryName}:latest
           EOF
 
           DOMAIN="${DomainName}"
@@ -214,7 +294,7 @@ Resources:
           EOF
           fi
 
-          echo "=== [PROD] 6. Creating Systemd Service for Auto-Restart on Boot ==="
+          echo "=== [PROD] 7. Creating Systemd Service for Auto-Restart on Boot ==="
           cat <<EOF > /etc/systemd/system/subtracker-prod.service
           [Unit]
           Description=SubTracker Production Docker Compose Stack
@@ -225,7 +305,7 @@ Resources:
           Type=oneshot
           RemainAfterExit=yes
           WorkingDirectory=/opt/subtracker-prod
-          ExecStart=/usr/libexec/docker/cli-plugins/docker-compose -f docker-compose.prod.yml up -d --build
+          ExecStart=/usr/libexec/docker/cli-plugins/docker-compose -f docker-compose.prod.yml up -d
           ExecStop=/usr/libexec/docker/cli-plugins/docker-compose -f docker-compose.prod.yml down
 
           [Install]
@@ -235,7 +315,7 @@ Resources:
           systemctl daemon-reload
           systemctl enable subtracker-prod.service
 
-          echo "=== [PROD] 7. Starting Docker Compose Stack ==="
+          echo "=== [PROD] 8. Starting Docker Compose Stack ==="
           /usr/libexec/docker/cli-plugins/docker-compose -f /opt/subtracker-prod/docker-compose.prod.yml up -d --build
 
           echo "=== [PROD] Deployment Complete ==="
@@ -244,6 +324,14 @@ Outputs:
   Environment:
     Description: Target environment
     Value: !Ref Environment
+
+  ECRRepositoryName:
+    Description: Amazon ECR repository name
+    Value: !Ref EcrRepositoryName
+
+  ECRRepositoryUri:
+    Description: Amazon ECR repository URI for SubTracker container images
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepositoryName}'
 
   InstanceId:
     Description: Production EC2 Instance ID

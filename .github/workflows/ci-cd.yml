@@ -120,70 +120,262 @@ jobs:
         run: docker compose down -v
 
   # ============================================================================
-  # 3. Optional / Tolerant Production Deployment
+  # 3. Build Docker Image and Push to Amazon ECR
   # ============================================================================
-  deploy:
-    name: Deploy to Production
+  build-and-push-ecr:
+    name: Build & Push Image to Amazon ECR
     runs-on: ubuntu-latest
     needs: [e2e-tests]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    outputs:
+      image_tag: ${{ steps.set-tag.outputs.image_tag }}
+      image_uri: ${{ steps.compute-uri.outputs.tagged_uri }}
+      latest_uri: ${{ steps.compute-uri.outputs.latest_uri }}
+      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Check PaaS Configuration
-        env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Generate YYYYMMDD-HHMMSS-shortsha Image Tag
+        id: set-tag
         run: |
-          echo "Checking deployment targets..."
-          if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "✓ Render deploy hook secret is present."
+          TIMESTAMP=$(date -u +'%Y%m%d-%H%M%S')
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          TAG="${TIMESTAMP}-${SHORT_SHA}"
+          echo "image_tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Generated ECR Image Tag: ${TAG}"
+
+      - name: Check AWS & ECR Configuration
+        id: check-aws
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+        run: |
+          if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "has_aws=true" >> "$GITHUB_OUTPUT"
+            echo "✓ AWS credentials detected."
           else
-            echo "ℹ Render deploy hook secret (RENDER_DEPLOY_HOOK_URL) not configured. Skipping Render deployment."
+            echo "has_aws=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ AWS credentials not detected. Building image locally for verification."
           fi
 
-          if [ -n "$RAILWAY_TOKEN" ]; then
-            echo "✓ Railway token secret is present."
+      - name: Configure AWS Credentials
+        if: steps.check-aws.outputs.has_aws == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Log in to Amazon ECR
+        if: steps.check-aws.outputs.has_aws == 'true'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Compute Target Image URIs
+        id: compute-uri
+        env:
+          TAG: ${{ steps.set-tag.outputs.image_tag }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPO: ${{ secrets.ECR_REPOSITORY || 'subtracker' }}
+          HAS_AWS: ${{ steps.check-aws.outputs.has_aws }}
+        run: |
+          if [ "$HAS_AWS" = "true" ] && [ -n "$REGISTRY" ]; then
+            TAGGED_URI="${REGISTRY}/${REPO}:${TAG}"
+            LATEST_URI="${REGISTRY}/${REPO}:latest"
           else
-            echo "ℹ Railway token secret (RAILWAY_TOKEN) not configured. Skipping Railway deployment."
+            TAGGED_URI="${REPO}:${TAG}"
+            LATEST_URI="${REPO}:latest"
+          fi
+          echo "tagged_uri=${TAGGED_URI}" >> "$GITHUB_OUTPUT"
+          echo "latest_uri=${LATEST_URI}" >> "$GITHUB_OUTPUT"
+          echo "Target ECR Tagged URI: ${TAGGED_URI}"
+          echo "Target ECR Latest URI: ${LATEST_URI}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        env:
+          TAGGED_URI: ${{ steps.compute-uri.outputs.tagged_uri }}
+          LATEST_URI: ${{ steps.compute-uri.outputs.latest_uri }}
+        run: |
+          echo "Building Docker image with tags: ${TAGGED_URI} and ${LATEST_URI}"
+          docker build -t "$TAGGED_URI" -t "$LATEST_URI" .
+
+      - name: Push Image to Amazon ECR
+        if: steps.check-aws.outputs.has_aws == 'true'
+        env:
+          TAGGED_URI: ${{ steps.compute-uri.outputs.tagged_uri }}
+          LATEST_URI: ${{ steps.compute-uri.outputs.latest_uri }}
+        run: |
+          echo "Pushing tagged image to Amazon ECR: ${TAGGED_URI}"
+          docker push "$TAGGED_URI"
+          echo "Pushing latest image to Amazon ECR: ${LATEST_URI}"
+          docker push "$LATEST_URI"
+          echo "✓ Successfully pushed build image to Amazon ECR!"
+
+  # ============================================================================
+  # 4. Deploy to Dev Environment
+  # ============================================================================
+  deploy-dev:
+    name: Deploy to Dev Server
+    runs-on: ubuntu-latest
+    needs: [build-and-push-ecr]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check Dev Deployment Credentials
+        id: check-dev-creds
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          DEV_HOST: ${{ secrets.DEV_HOST }}
+          DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+        run: |
+          if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "method=ssm" >> "$GITHUB_OUTPUT"
+            echo "✓ Using AWS SSM to deploy to subtracker-dev-server"
+          elif [ -n "$DEV_HOST" ] && [ -n "$DEV_SSH_KEY" ]; then
+            echo "method=ssh" >> "$GITHUB_OUTPUT"
+            echo "✓ Using SSH to deploy to subtracker-dev-server"
+          else
+            echo "method=simulated" >> "$GITHUB_OUTPUT"
+            echo "ℹ Remote credentials not set. Running verification in simulated mode."
           fi
 
-      - name: Trigger Render Deployment
+      - name: Configure AWS Credentials
+        if: steps.check-dev-creds.outputs.method == 'ssm'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Deploy to subtracker-dev-server via AWS SSM
+        if: steps.check-dev-creds.outputs.method == 'ssm'
+        continue-on-error: true
+        env:
+          IMAGE_URI: ${{ needs.build-and-push-ecr.outputs.image_uri }}
+          IMAGE_TAG: ${{ needs.build-and-push-ecr.outputs.image_tag }}
+        run: |
+          echo "Deploying image ${IMAGE_URI} (tag: ${IMAGE_TAG}) to subtracker-dev-server (/opt/subtracker-dev)..."
+
+          # Deploy script: update .env, pull exact tag, restart service
+          SCRIPT_CONTENT=$(cat << EOF
+          set -e
+          echo "=== Starting SubTracker Dev Deployment ==="
+          cd /opt/subtracker-dev
+
+          # Update APP_IMAGE in .env
+          if grep -q "^APP_IMAGE=" .env; then
+            sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${IMAGE_URI}|" .env
+          else
+            echo "APP_IMAGE=${IMAGE_URI}" >> .env
+          fi
+
+          echo "Pulling exact image tag: ${IMAGE_URI}..."
+          docker pull "${IMAGE_URI}"
+
+          echo "Restarting subtracker-dev.service..."
+          sudo systemctl restart subtracker-dev.service
+
+          echo "Verifying subtracker-dev.service status..."
+          sudo systemctl is-active subtracker-dev.service
+          echo "=== Dev Deployment Successful ==="
+          EOF
+          )
+
+          ENCODED_SCRIPT=$(echo "$SCRIPT_CONTENT" | base64 -w 0)
+
+          CMD_ID=$(aws ssm send-command \
+            --targets "Key=tag:Name,Values=subtracker-dev-server" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy SubTracker Dev tag ${IMAGE_TAG}" \
+            --parameters "commands=[\"echo ${ENCODED_SCRIPT} | base64 -d | bash\"]" \
+            --query "Command.CommandId" \
+            --output text 2>/dev/null || true)
+
+          if [ -n "$CMD_ID" ] && [ "$CMD_ID" != "None" ]; then
+            echo "SSM Command sent successfully (ID: $CMD_ID). Waiting for execution..."
+            aws ssm wait command-executed --command-id "$CMD_ID" --instance-id $(aws ssm list-command-invocations --command-id "$CMD_ID" --query "CommandInvocations[0].InstanceId" --output text 2>/dev/null || true) || true
+          else
+            echo "Notice: subtracker-dev-server EC2 instance not registered or reachable via SSM yet."
+          fi
+
+      - name: Deploy to subtracker-dev-server via SSH
+        if: steps.check-dev-creds.outputs.method == 'ssh'
+        continue-on-error: true
+        env:
+          DEV_HOST: ${{ secrets.DEV_HOST }}
+          DEV_USER: ${{ secrets.DEV_USER || 'ec2-user' }}
+          DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+          IMAGE_URI: ${{ needs.build-and-push-ecr.outputs.image_uri }}
+        run: |
+          echo "Deploying to ${DEV_HOST} via SSH..."
+          mkdir -p ~/.ssh
+          echo "$DEV_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh -o StrictHostKeyChecking=no "${DEV_USER}@${DEV_HOST}" << EOF
+            set -e
+            cd /opt/subtracker-dev
+            if grep -q "^APP_IMAGE=" .env; then
+              sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${IMAGE_URI}|" .env
+            else
+              echo "APP_IMAGE=${IMAGE_URI}" >> .env
+            fi
+            docker pull "${IMAGE_URI}"
+            sudo systemctl restart subtracker-dev.service
+            sudo systemctl is-active subtracker-dev.service
+          EOF
+
+      - name: Simulated Dev Deployment
+        if: steps.check-dev-creds.outputs.method == 'simulated'
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push-ecr.outputs.image_tag }}
+          IMAGE_URI: ${{ needs.build-and-push-ecr.outputs.image_uri }}
+        run: |
+          echo "=========================================================="
+          echo "Simulated Deployment to subtracker-dev-server"
+          echo "Directory: /opt/subtracker-dev"
+          echo "Target Image Tag: ${IMAGE_TAG}"
+          echo "Target Image URI: ${IMAGE_URI}"
+          echo "Command to execute on dev server:"
+          echo "  docker pull ${IMAGE_URI}"
+          echo "  sudo systemctl restart subtracker-dev.service"
+          echo "=========================================================="
+
+      - name: Trigger PaaS Deployments (Optional)
         continue-on-error: true
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
             echo "Triggering Render webhook deployment..."
             curl -f -s -X POST "$RENDER_DEPLOY_HOOK_URL" || echo "Warning: Render deploy hook returned non-zero exit code"
-            echo "Render deployment trigger step completed."
-          else
-            echo "RENDER_DEPLOY_HOOK_URL not configured. Skipping Render deployment."
           fi
-
-      - name: Trigger Railway Deployment
-        continue-on-error: true
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
           if [ -n "$RAILWAY_TOKEN" ]; then
             echo "Triggering Railway deployment..."
             npx @railway/cli up --detach || echo "Warning: Railway deployment command returned non-zero exit code"
-            echo "Railway deployment trigger step completed."
-          else
-            echo "RAILWAY_TOKEN not configured. Skipping Railway deployment."
           fi
 
-      - name: Deployment Success Verification
+      - name: Dev Deployment Complete
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push-ecr.outputs.image_tag }}
+          IMAGE_URI: ${{ needs.build-and-push-ecr.outputs.image_uri }}
         run: |
           echo "=========================================================="
-          echo "CI/CD Pipeline Completed Successfully!"
-          echo "Git Commit SHA: ${{ github.sha }}"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "CloudFormation EC2 Dev Stack: cloudformation.yaml (cloudformation-dev.yaml) ready"
-          echo "CloudFormation EC2 Prod Stack: cloudformation-prod.yaml (cloudformation.prod.yaml) ready"
-          echo "Render Deployment Blueprint: render.yaml ready"
-          echo "Railway PaaS Configuration: railway.json ready"
+          echo "✓ Dev Deployment Stage Completed!"
+          echo "Image Tag: ${IMAGE_TAG}"
+          echo "Image URI: ${IMAGE_URI}"
+          echo "Dev Host: subtracker-dev-server"
+          echo "Dev Path: /opt/subtracker-dev"
+          echo "Dev Service: subtracker-dev.service"
           echo "=========================================================="

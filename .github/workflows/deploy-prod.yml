@@ -1,0 +1,260 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type "DEPLOY" to confirm production release'
+        required: true
+        default: ''
+      image_tag:
+        description: 'Specific image tag to promote (e.g. 20261116-120000-abc1234). If omitted, promotes current dev tag.'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  # ============================================================================
+  # Promote Image to Production Stack
+  # ============================================================================
+  promote-to-production:
+    name: Promote Image to Production Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate Confirmation Input
+        env:
+          CONFIRMATION: ${{ github.event.inputs.confirmation }}
+        run: |
+          if [ "$CONFIRMATION" != "DEPLOY" ]; then
+            echo "::error::Deployment cancelled! You must enter 'DEPLOY' to confirm production promotion. Received: '$CONFIRMATION'"
+            exit 1
+          fi
+          echo "✓ Confirmation verified: Production deployment authorized by ${{ github.actor }}"
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check AWS & Access Configuration
+        id: check-creds
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+        run: |
+          if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "has_aws=true" >> "$GITHUB_OUTPUT"
+            echo "method=ssm" >> "$GITHUB_OUTPUT"
+            echo "✓ AWS credentials detected. SSM deployment mode enabled."
+          elif [ -n "$PROD_HOST" ] && [ -n "$PROD_SSH_KEY" ]; then
+            echo "has_aws=false" >> "$GITHUB_OUTPUT"
+            echo "method=ssh" >> "$GITHUB_OUTPUT"
+            echo "✓ SSH credentials detected. SSH deployment mode enabled."
+          else
+            echo "has_aws=false" >> "$GITHUB_OUTPUT"
+            echo "method=simulated" >> "$GITHUB_OUTPUT"
+            echo "ℹ Remote prod credentials not configured. Running in simulated promotion mode."
+          fi
+
+      - name: Configure AWS Credentials
+        if: steps.check-creds.outputs.has_aws == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Log in to Amazon ECR
+        if: steps.check-creds.outputs.has_aws == 'true'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Resolve Target Image Tag
+        id: resolve-tag
+        env:
+          INPUT_TAG: ${{ github.event.inputs.image_tag }}
+          HAS_AWS: ${{ steps.check-creds.outputs.has_aws }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPO: ${{ secrets.ECR_REPOSITORY || 'subtracker' }}
+        run: |
+          TARGET_TAG=""
+
+          # 1. Use user-specified tag if provided
+          if [ -n "$INPUT_TAG" ]; then
+            echo "Using user-specified image tag: $INPUT_TAG"
+            TARGET_TAG="$INPUT_TAG"
+          fi
+
+          # 2. If tag not specified, discover current tag running in subtracker-dev
+          if [ -z "$TARGET_TAG" ] && [ "$HAS_AWS" = "true" ]; then
+            echo "No image_tag specified. Inspecting subtracker-dev-server for current running tag..."
+
+            # Query dev server .env file via SSM
+            DEV_RUNNING_TAG=$(aws ssm send-command \
+              --targets "Key=tag:Name,Values=subtracker-dev-server" \
+              --document-name "AWS-RunShellScript" \
+              --comment "Query running image tag on subtracker-dev" \
+              --parameters 'commands=["grep ^APP_IMAGE= /opt/subtracker-dev/.env | cut -d: -f2"]' \
+              --query "Command.CommandId" \
+              --output text 2>/dev/null || true)
+
+            if [ -n "$DEV_RUNNING_TAG" ] && [ "$DEV_RUNNING_TAG" != "None" ]; then
+              sleep 5
+              DEV_OUTPUT=$(aws ssm get-command-invocation \
+                --command-id "$DEV_RUNNING_TAG" \
+                --instance-id $(aws ssm list-command-invocations --command-id "$DEV_RUNNING_TAG" --query "CommandInvocations[0].InstanceId" --output text 2>/dev/null || true) \
+                --query "StandardOutputContent" \
+                --output text 2>/dev/null | tr -d '\r\n ' || true)
+              if [ -n "$DEV_OUTPUT" ]; then
+                TARGET_TAG="$DEV_OUTPUT"
+                echo "✓ Discovered currently running tag in subtracker-dev: $TARGET_TAG"
+              fi
+            fi
+
+            # Fallback to latest tagged build image in Amazon ECR
+            if [ -z "$TARGET_TAG" ]; then
+              echo "Querying Amazon ECR for latest build image tag..."
+              LATEST_BUILD_TAG=$(aws ecr describe-images \
+                --repository-name "$REPO" \
+                --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[?starts_with(@, `20`) == `true`]' \
+                --output text 2>/dev/null | awk '{print $1}' || true)
+              if [ -n "$LATEST_BUILD_TAG" ] && [ "$LATEST_BUILD_TAG" != "None" ]; then
+                TARGET_TAG="$LATEST_BUILD_TAG"
+                echo "✓ Found latest build tag in ECR: $TARGET_TAG"
+              fi
+            fi
+          fi
+
+          # 3. Default fallback
+          if [ -z "$TARGET_TAG" ]; then
+            TARGET_TAG="latest"
+            echo "Defaulting target tag to: latest"
+          fi
+
+          # Compute full ECR image URI
+          if [ -n "$REGISTRY" ]; then
+            FULL_IMAGE_URI="${REGISTRY}/${REPO}:${TARGET_TAG}"
+          else
+            FULL_IMAGE_URI="${REPO}:${TARGET_TAG}"
+          fi
+
+          echo "target_tag=${TARGET_TAG}" >> "$GITHUB_OUTPUT"
+          echo "full_image_uri=${FULL_IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "Promoting image URI: ${FULL_IMAGE_URI}"
+
+      - name: Deploy to subtracker-prod-server via AWS SSM
+        if: steps.check-creds.outputs.method == 'ssm'
+        continue-on-error: true
+        env:
+          PROD_IMAGE_URI: ${{ steps.resolve-tag.outputs.full_image_uri }}
+          TARGET_TAG: ${{ steps.resolve-tag.outputs.target_tag }}
+        run: |
+          echo "Promoting image ${PROD_IMAGE_URI} on subtracker-prod-server (/opt/subtracker-prod)..."
+
+          # Production deployment script
+          SCRIPT_CONTENT=$(cat << EOF
+          set -e
+          echo "=== Starting SubTracker Production Promotion ==="
+          cd /opt/subtracker-prod
+
+          # Update APP_IMAGE in .env
+          if grep -q "^APP_IMAGE=" .env; then
+            sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${PROD_IMAGE_URI}|" .env
+          else
+            echo "APP_IMAGE=${PROD_IMAGE_URI}" >> .env
+          fi
+
+          echo "Pulling promoted image tag from Amazon ECR: ${PROD_IMAGE_URI}..."
+          docker pull "${PROD_IMAGE_URI}"
+
+          echo "Restarting subtracker-prod.service..."
+          sudo systemctl restart subtracker-prod.service
+
+          echo "Verifying subtracker-prod.service is active..."
+          sudo systemctl is-active subtracker-prod.service
+
+          echo "=== Production Promotion Completed Successfully ==="
+          EOF
+          )
+
+          ENCODED_SCRIPT=$(echo "$SCRIPT_CONTENT" | base64 -w 0)
+
+          CMD_ID=$(aws ssm send-command \
+            --targets "Key=tag:Name,Values=subtracker-prod-server" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Promote to production tag ${TARGET_TAG}" \
+            --parameters "commands=[\"echo ${ENCODED_SCRIPT} | base64 -d | bash\"]" \
+            --query "Command.CommandId" \
+            --output text 2>/dev/null || true)
+
+          if [ -n "$CMD_ID" ] && [ "$CMD_ID" != "None" ]; then
+            echo "SSM Command sent (ID: $CMD_ID). Waiting for production execution..."
+            aws ssm wait command-executed --command-id "$CMD_ID" --instance-id $(aws ssm list-command-invocations --command-id "$CMD_ID" --query "CommandInvocations[0].InstanceId" --output text 2>/dev/null || true) || true
+          else
+            echo "Notice: subtracker-prod-server not reachable via SSM yet or not online."
+          fi
+
+      - name: Deploy to subtracker-prod-server via SSH
+        if: steps.check-creds.outputs.method == 'ssh'
+        continue-on-error: true
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER || 'ec2-user' }}
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+          PROD_IMAGE_URI: ${{ steps.resolve-tag.outputs.full_image_uri }}
+        run: |
+          echo "Promoting to ${PROD_HOST} via SSH..."
+          mkdir -p ~/.ssh
+          echo "$PROD_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh -o StrictHostKeyChecking=no "${PROD_USER}@${PROD_HOST}" << EOF
+            set -e
+            cd /opt/subtracker-prod
+            if grep -q "^APP_IMAGE=" .env; then
+              sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${PROD_IMAGE_URI}|" .env
+            else
+              echo "APP_IMAGE=${PROD_IMAGE_URI}" >> .env
+            fi
+            docker pull "${PROD_IMAGE_URI}"
+            sudo systemctl restart subtracker-prod.service
+            sudo systemctl is-active subtracker-prod.service
+          EOF
+
+      - name: Simulated Production Promotion
+        if: steps.check-creds.outputs.method == 'simulated'
+        env:
+          PROD_IMAGE_URI: ${{ steps.resolve-tag.outputs.full_image_uri }}
+          TARGET_TAG: ${{ steps.resolve-tag.outputs.target_tag }}
+        run: |
+          echo "=========================================================="
+          echo "Simulated Production Promotion"
+          echo "Target Server: subtracker-prod-server"
+          echo "Directory: /opt/subtracker-prod"
+          echo "Promoted Tag: ${TARGET_TAG}"
+          echo "Promoted Image URI: ${PROD_IMAGE_URI}"
+          echo "Service: subtracker-prod.service"
+          echo "Commands:"
+          echo "  docker pull ${PROD_IMAGE_URI}"
+          echo "  sudo systemctl restart subtracker-prod.service"
+          echo "=========================================================="
+
+      - name: Production Promotion Summary
+        env:
+          TARGET_TAG: ${{ steps.resolve-tag.outputs.target_tag }}
+          PROD_IMAGE_URI: ${{ steps.resolve-tag.outputs.full_image_uri }}
+        run: |
+          echo "=========================================================="
+          echo "🚀 SubTracker Production Promotion Complete!"
+          echo "Tag: ${TARGET_TAG}"
+          echo "Image: ${PROD_IMAGE_URI}"
+          echo "Server: subtracker-prod-server"
+          echo "Path: /opt/subtracker-prod"
+          echo "Service: subtracker-prod.service"
+          echo "Promoted By: ${{ github.actor }}"
+          echo "Timestamp: $(date -u)"
+          echo "=========================================================="

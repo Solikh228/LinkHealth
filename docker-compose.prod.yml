@@ -19,7 +19,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fullstack-app:latest
+    image: ${APP_IMAGE:-fullstack-app:latest}
     container_name: subtracker-web
     expose:
       - "8000"
