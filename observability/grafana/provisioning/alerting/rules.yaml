@@ -1,0 +1,61 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: SubTracker Alert Rules
+    folder: SubTracker Alerts
+    interval: 1m
+    rules:
+      - uid: subtracker-creation-failures-alert
+        title: HighSubscriptionCreationFailureRate
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus-subtracker
+            model:
+              editorMode: code
+              expr: sum(rate(subtracker_subscription_creation_failures_total[1m])) * 60 or sum(rate(subtracker_subscription_creation_failures[1m])) * 60 or vector(0)
+              instant: true
+              range: false
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              reducer: last
+              expression: A
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [3]
+                    type: gt
+              refId: C
+        labels:
+          severity: critical
+          service: subtracker-backend
+          environment: dev
+          deployed_version: latest
+          owner: subtracker-oncall
+        annotations:
+          summary: "High subscription creation failure rate on {{ $labels.service }} ({{ $labels.environment }})"
+          description: "Subscription creation failure rate is {{ $values.B.Value | printf \"%.1f\" }} failures/min (exceeding threshold of 3 failures/min for > 2m). Real user impact: users are actively failing to create or update subscriptions."
+          runbook_url: "https://github.com/Solikh228/LinkHealth/blob/main/docs/runbooks/subscription-creation-failures.md"
+          dashboard_url: "http://localhost:3000/d/subtracker-otel-overview/subtracker-opentelemetry-observability"
+          troubleshooting: "1. Check Grafana dashboard for recent error spikes. 2. Query Loki logs for 'operation=create' or 'operation=update' with status_code >= 400. 3. Verify PostgreSQL database health and active connection pool status."

@@ -1,0 +1,16 @@
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: subtracker-oncall-webhook
+    group_by:
+      - alertname
+      - service
+      - environment
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 1h
+    routes:
+      - receiver: subtracker-oncall-webhook
+        object_matchers:
+          - ['service', '=', 'subtracker-backend']

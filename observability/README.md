@@ -33,6 +33,12 @@ It operates independently from the application stack (`docker-compose.prod.yml`)
                                  ┌───────────────────┐
                                  │      Grafana      │
                                  │    (Port 3000)    │
+                                 └─────────┬─────────┘
+                                           │ Webhook Alerts
+                                           ▼
+                                 ┌───────────────────┐
+                                 │ On-Call Responder │
+                                 │ (ONCALL_WEBHOOK)  │
                                  └───────────────────┘
 ```
 
@@ -52,6 +58,22 @@ The FastAPI backend exposes the following custom OpenTelemetry business metrics:
 
 ---
 
+## Actionable Alerting & On-Call Webhook
+
+Grafana Alerting is pre-provisioned under `observability/grafana/provisioning/alerting/`:
+
+1. **Alert Rule (`rules.yaml`)**:
+   - **Rule Name**: `HighSubscriptionCreationFailureRate`
+   - **Condition**: Repeated failures exceeding **3 failures per minute** sustained for **2 minutes** (`for: 2m`).
+   - **Labels**: `service: subtracker-backend`, `environment: dev` (or `prod`), `deployed_version: latest`, `owner: subtracker-oncall`, `severity: critical`.
+   - **Annotations**: Summary, user-impact description, troubleshooting runbook instructions, and direct clickable link to the Grafana dashboard (`dashboard_url`).
+
+2. **Contact Point & Notification Policy (`contact_points.yaml` & `notification_policies.yaml`)**:
+   - Receives firing alerts and sends a structured JSON payload via HTTP POST to `${ONCALL_WEBHOOK_URL}`.
+   - Evaluates on 10s wait, 1m group interval, with 1h repeat intervals for persistent firing states.
+
+---
+
 ## Services & Ports
 
 | Service | Port | Description |
@@ -61,7 +83,7 @@ The FastAPI backend exposes the following custom OpenTelemetry business metrics:
 | **Prometheus** | `9090` | Time-series metrics storage and querying |
 | **Loki** | `3100` | Log aggregation with native OTLP ingestion |
 | **Tempo** | `3200` (HTTP Query), `4317` (Internal) | Distributed tracing backend |
-| **Grafana** | `3000` | Pre-provisioned dashboards with unified metrics/logs/traces |
+| **Grafana** | `3000` | Pre-provisioned dashboards & alerts with unified metrics/logs/traces |
 
 ---
 
@@ -70,6 +92,8 @@ The FastAPI backend exposes the following custom OpenTelemetry business metrics:
 ### 1. Launch Observability Stack
 ```bash
 cd observability
+# Set your responder webhook endpoint (optional, defaults to host.docker.internal:8080/alerts)
+export ONCALL_WEBHOOK_URL="https://oncall.example.com/api/v1/alerts/webhook"
 docker compose up -d
 ```
 
@@ -79,6 +103,7 @@ Open your browser to: [http://localhost:3000](http://localhost:3000)
 - **Password**: `admin`
 - Pre-provisioned Datasources: `Prometheus`, `Loki`, `Tempo`
 - Pre-provisioned Dashboard: `SubTracker - OpenTelemetry Observability` (with `environment` and `deployed_version` template variables)
+- Pre-provisioned Alert Rules: Under **Alerting > Alert rules**
 
 ### 3. Connect Application (`subtracker-dev` or `subtracker-prod`)
 Set the following environment variables in your application's `.env`:

@@ -1,0 +1,12 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: subtracker-oncall-webhook
+    receivers:
+      - uid: subtracker-webhook-receiver
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: ${ONCALL_WEBHOOK_URL:-http://host.docker.internal:8080/alerts}
+          httpMethod: POST
