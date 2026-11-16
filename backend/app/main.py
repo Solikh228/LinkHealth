@@ -21,11 +21,21 @@ from routers.bank_integrations import router as bank_integrations_router
 from routers.email_integrations import router as email_integrations_router
 from routers.collaboration import router as collaboration_router
 
+try:
+    from database import engine
+    from telemetry import init_telemetry
+except ImportError:
+    from ..database import engine
+    from .telemetry import init_telemetry
+
 app = FastAPI(
     title="SubTracker API",
     description="Backend REST API for Hidden B2B Subscriptions & Waste Finder Tracker",
     version="1.0.0",
 )
+
+# Initialize OpenTelemetry Tracing, Metrics, Logging, and Auto-instrumentation
+init_telemetry(app=app, engine=engine)
 
 # CORS Middleware
 app.add_middleware(

@@ -246,6 +246,8 @@ Resources:
           POSTGRES_DB=appdb_dev
           DATABASE_URL=postgresql://dev_user:${DBPassword}@db:5432/appdb_dev
           APP_IMAGE=${AppRepository.RepositoryUri}:latest
+          OTEL_SERVICE_NAME=subtracker-backend
+          OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
           EOF
 
           DOMAIN="${DomainName}"

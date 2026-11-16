@@ -1,0 +1,61 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+
+exporters:
+  # 1. Prometheus exporter (Prometheus scrapes metrics from port 8889)
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: subtracker
+    send_timestamps: true
+    metric_expiration: 180m
+    enable_open_metrics: true
+
+  # 2. Loki exporter (OTLP logs ingestion supported natively in Loki 3.x)
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
+  # 3. Tempo exporter (OTLP gRPC traces ingestion into Tempo)
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # 4. Debug exporter for collector logging
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/tempo, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus, debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/loki, debug]

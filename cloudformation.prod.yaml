@@ -265,6 +265,8 @@ Resources:
           POSTGRES_DB=appdb_prod
           DATABASE_URL=postgresql://prod_user:${DBPassword}@db:5432/appdb_prod
           APP_IMAGE=${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepositoryName}:latest
+          OTEL_SERVICE_NAME=subtracker-backend
+          OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
           EOF
 
           DOMAIN="${DomainName}"

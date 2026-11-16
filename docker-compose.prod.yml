@@ -26,6 +26,10 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-appdb}
       PORT: "8000"
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      APP_IMAGE: ${APP_IMAGE:-fullstack-app:latest}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-subtracker-backend}
     depends_on:
       db:
         condition: service_healthy
