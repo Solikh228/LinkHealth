@@ -1,0 +1,4 @@
+# Keep this directory in git
+!.gitkeep
+# Ignore generated incident reports
+*.md

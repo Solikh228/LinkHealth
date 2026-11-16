@@ -62,7 +62,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-      - ONCALL_WEBHOOK_URL=${ONCALL_WEBHOOK_URL:-http://host.docker.internal:8080/alerts}
+      - ONCALL_WEBHOOK_URL=${ONCALL_WEBHOOK_URL:-http://oncall-agent:8080/alerts}
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
@@ -73,8 +73,34 @@ services:
       - loki
       - tempo
 
+  oncall-agent:
+    build:
+      context: ./oncall-agent
+      dockerfile: Dockerfile
+    container_name: subtracker-oncall-agent
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - LOKI_URL=http://loki:3100
+      - TEMPO_URL=http://tempo:3200
+      - PROMETHEUS_URL=http://prometheus:9090
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_REPOSITORY=${GITHUB_REPOSITORY:-Solikh228/LinkHealth}
+      - INCIDENTS_DIR=/app/incidents
+    volumes:
+      - oncall_incidents:/app/incidents
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
 volumes:
   prometheus_data:
   loki_data:
   tempo_data:
   grafana_data:
+  oncall_incidents:

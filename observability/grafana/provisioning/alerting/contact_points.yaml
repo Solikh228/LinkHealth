@@ -8,5 +8,5 @@ contactPoints:
         type: webhook
         disableResolveMessage: false
         settings:
-          url: ${ONCALL_WEBHOOK_URL:-http://host.docker.internal:8080/alerts}
+          url: ${ONCALL_WEBHOOK_URL:-http://oncall-agent:8080/alerts}
           httpMethod: POST

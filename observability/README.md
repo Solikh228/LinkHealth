@@ -84,6 +84,32 @@ Grafana Alerting is pre-provisioned under `observability/grafana/provisioning/al
 | **Loki** | `3100` | Log aggregation with native OTLP ingestion |
 | **Tempo** | `3200` (HTTP Query), `4317` (Internal) | Distributed tracing backend |
 | **Grafana** | `3000` | Pre-provisioned dashboards & alerts with unified metrics/logs/traces |
+| **AI On-Call Agent** | `8080` | Autonomous alert investigator, telemetry correlator & RCA generator |
+
+---
+
+## AI On-Call Responder Agent (`observability/oncall-agent/`)
+
+The stack includes an autonomous incident responder agent listening at `http://oncall-agent:8080/alerts`.
+When Grafana fires an alert:
+1. The agent parses alert metadata (`alertname`, `service`, `environment`, `deployed_version`, `severity`, etc.).
+2. It queries Loki for recent `ERROR` / 5xx logs, Tempo for traces, Prometheus for current failure rates, and git commit history.
+3. It performs Root-Cause Analysis (RCA) using LLMs (OpenAI / Anthropic / Gemini, or built-in deterministic heuristic fallback).
+4. It outputs an executive summary, technical root cause, concrete rollback command, and code patch, saving a local Markdown incident report to `/app/incidents` and opening a GitHub Issue if `GITHUB_TOKEN` is set.
+
+### Simulating an Alert
+To trigger an end-to-end incident investigation flow manually without waiting for real production failures:
+```bash
+curl -X POST http://localhost:8080/simulate-alert
+```
+View the generated incident reports at:
+```bash
+# List recent incidents
+curl http://localhost:8080/incidents
+
+# View formatted Markdown report
+curl http://localhost:8080/incidents/<incident_id>/report
+```
 
 ---
 
