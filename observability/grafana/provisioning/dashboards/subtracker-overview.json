@@ -25,7 +25,292 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 100,
-      "title": "SubTracker Service Overview",
+      "title": "SubTracker Business Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-subtracker"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
+      "id": 10,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
+          "editorMode": "code",
+          "expr": "sum(subtracker_active_subscriptions{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}) or sum(subtracker_active_subscriptions) or vector(0)",
+          "legendFormat": "Active Subscriptions",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Active Subscriptions",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-subtracker"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "purple", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 1 },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
+          "editorMode": "code",
+          "expr": "sum(subtracker_active_users{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}) or sum(subtracker_active_users) or vector(0)",
+          "legendFormat": "Active Users",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Active Users",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-subtracker"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "semi-dark-green", "value": 0.01 }
+            ]
+          },
+          "unit": "ops/s"
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 1 },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull", "mean"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
+          "editorMode": "code",
+          "expr": "sum(rate(subtracker_subscriptions_created_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) or sum(rate(subtracker_subscriptions_created{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) or vector(0)",
+          "legendFormat": "Subscriptions Created Rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Subscriptions Created Rate (5m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-subtracker"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.001 }
+            ]
+          },
+          "unit": "ops/s"
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 1 },
+      "id": 13,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
+          "editorMode": "code",
+          "expr": "sum(rate(subtracker_subscription_creation_failures_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) or sum(rate(subtracker_subscription_creation_failures{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) or vector(0)",
+          "legendFormat": "Creation Failures Rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Subscription Creation Failures (5m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-subtracker"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "unit": "ops/s"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+      "id": 14,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
+          "editorMode": "code",
+          "expr": "sum(rate(subtracker_subscriptions_created_total{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) by (cadence, vendor) or sum(rate(subtracker_subscriptions_created{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) by (cadence, vendor)",
+          "legendFormat": "{{vendor}} ({{cadence}})",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Subscriptions Created over Time (5m Rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-subtracker"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "id": 15,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum(rate(subtracker_notification_delivery_latency_bucket{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) by (le))",
+          "legendFormat": "p95 Notification Latency",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.50, sum(rate(subtracker_notification_delivery_latency_bucket{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) by (le))",
+          "legendFormat": "p50 Notification Latency",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Renewal Notification Delivery Latency (p50 / p95)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "id": 101,
+      "title": "HTTP & API Performance (OpenTelemetry Auto-Instrumentation)",
       "type": "row"
     },
     {
@@ -52,7 +337,7 @@
           "unit": "reqps"
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "id": 1,
       "options": {
         "legend": { "calcs": ["mean", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
@@ -62,7 +347,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
           "editorMode": "code",
-          "expr": "sum(rate(subtracker_http_server_duration_milliseconds_count[1m])) by (http_route, http_status_code)",
+          "expr": "sum(rate(subtracker_http_server_duration_milliseconds_count{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[1m])) by (http_route, http_status_code) or sum(rate(subtracker_http_server_duration_milliseconds_count[1m])) by (http_route, http_status_code)",
           "legendFormat": "{{http_route}} [{{http_status_code}}]",
           "range": true,
           "refId": "A"
@@ -95,7 +380,7 @@
           "unit": "ms"
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "id": 2,
       "options": {
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
@@ -105,7 +390,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(subtracker_http_server_duration_milliseconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(subtracker_http_server_duration_milliseconds_bucket{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) by (le)) or histogram_quantile(0.95, sum(rate(subtracker_http_server_duration_milliseconds_bucket[5m])) by (le))",
           "legendFormat": "p95 Latency",
           "range": true,
           "refId": "A"
@@ -113,7 +398,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum(rate(subtracker_http_server_duration_milliseconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(subtracker_http_server_duration_milliseconds_bucket{environment=~\"$environment\", deployed_version=~\"$deployed_version\"}[5m])) by (le)) or histogram_quantile(0.50, sum(rate(subtracker_http_server_duration_milliseconds_bucket[5m])) by (le))",
           "legendFormat": "p50 Latency",
           "range": true,
           "refId": "B"
@@ -124,8 +409,8 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
-      "id": 101,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "id": 102,
       "title": "Logs & Traces Correlation",
       "type": "row"
     },
@@ -134,7 +419,7 @@
         "type": "loki",
         "uid": "loki-subtracker"
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 25 },
       "id": 3,
       "options": {
         "dedupStrategy": "none",
@@ -160,19 +445,37 @@
   ],
   "refresh": "10s",
   "schemaVersion": 39,
-  "tags": ["subtracker", "opentelemetry", "fastapi"],
+  "tags": ["subtracker", "opentelemetry", "business-metrics", "fastapi"],
   "templating": {
     "list": [
       {
+        "allValue": ".*",
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
-        "definition": "label_values(deployment_environment_name)",
+        "definition": "label_values(environment)",
         "hide": 0,
         "includeAll": true,
+        "label": "Environment",
         "multi": true,
         "name": "environment",
-        "query": { "query": "label_values(deployment_environment_name)", "refId": "StandardVariableQuery" },
+        "query": { "query": "label_values(environment)", "refId": "StandardVariableQuery" },
         "refresh": 1,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": { "type": "prometheus", "uid": "prometheus-subtracker" },
+        "definition": "label_values(deployed_version)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Deployed Version",
+        "multi": true,
+        "name": "deployed_version",
+        "query": { "query": "label_values(deployed_version)", "refId": "StandardVariableQuery" },
+        "refresh": 1,
+        "sort": 1,
         "type": "query"
       }
     ]
@@ -187,5 +490,5 @@
   "timezone": "browser",
   "title": "SubTracker - OpenTelemetry Observability",
   "uid": "subtracker-otel-overview",
-  "version": 1
+  "version": 2
 }

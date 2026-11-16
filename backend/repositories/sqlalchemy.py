@@ -234,6 +234,11 @@ class SqlAlchemySubscriptionRepository(SubscriptionRepository):
                 note=getattr(subscription, "note", None),
             )
             self.session.add(item)
+            try:
+                from telemetry import record_subscription_created
+                record_subscription_created(cadence=subscription.billingInterval, vendor=subscription.name)
+            except Exception:
+                pass
 
         # Handle embedded transactions and evidence if provided
         if subscription.transactions:

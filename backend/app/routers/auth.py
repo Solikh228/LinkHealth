@@ -3,6 +3,11 @@ from ..auth import create_access_token, get_current_user
 from ..models import SessionRequest, SessionResponse, User, Workspace
 from ..store import store
 
+try:
+    from telemetry import record_active_user_login, record_active_user_logout
+except ImportError:
+    from app.telemetry import record_active_user_login, record_active_user_logout
+
 router = APIRouter(tags=["Auth"])
 
 
@@ -15,6 +20,7 @@ def create_session(body: SessionRequest):
             detail="Invalid email or password",
         )
     token = create_access_token({"sub": user.id, "email": user.email})
+    record_active_user_login(user_id=user.id)
     return SessionResponse(token=token, user=user)
 
 
@@ -31,4 +37,5 @@ def get_workspace(user: User = Depends(get_current_user)):
 @router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
 def delete_account(user: User = Depends(get_current_user)):
     store.delete_account(user.id)
+    record_active_user_logout(user_id=user.id)
     return None

@@ -14,6 +14,7 @@ It operates independently from the application stack (`docker-compose.prod.yml`)
                       │   - OpenTelemetry Python SDK          │
                       │   - FastAPI & SQLAlchemy auto-instr   │
                       │   - Structured logging handler        │
+                      │   - Custom business metrics           │
                       └──────────────────┬────────────────────┘
                                          │ OTLP (gRPC / HTTP)
                                          ▼
@@ -34,6 +35,20 @@ It operates independently from the application stack (`docker-compose.prod.yml`)
                                  │    (Port 3000)    │
                                  └───────────────────┘
 ```
+
+---
+
+## Custom Application Business Metrics
+
+The FastAPI backend exposes the following custom OpenTelemetry business metrics:
+
+| Metric Name | Type | Description | Labels / Attributes |
+| :--- | :--- | :--- | :--- |
+| `subscriptions_created` | Counter | Total number of subscriptions created | `environment`, `deployed_version`, `cadence`, `vendor` |
+| `active_subscriptions` | UpDownCounter / Gauge | Current total number of active subscriptions | `environment`, `deployed_version`, `status` |
+| `active_users` | UpDownCounter / Gauge | Current total number of active users | `environment`, `deployed_version`, `user_id` |
+| `subscription_creation_failures` | Counter | Total failed creation/update attempts (validation, DB, 5xx) | `environment`, `deployed_version`, `reason`, `operation`, `status_code` |
+| `notification_delivery_latency` | Histogram | Latency (in ms) of sending/processing renewal notifications | `environment`, `deployed_version`, `notification_type`, `status` |
 
 ---
 
@@ -63,7 +78,7 @@ Open your browser to: [http://localhost:3000](http://localhost:3000)
 - **User**: `admin`
 - **Password**: `admin`
 - Pre-provisioned Datasources: `Prometheus`, `Loki`, `Tempo`
-- Pre-provisioned Dashboard: `SubTracker - OpenTelemetry Observability`
+- Pre-provisioned Dashboard: `SubTracker - OpenTelemetry Observability` (with `environment` and `deployed_version` template variables)
 
 ### 3. Connect Application (`subtracker-dev` or `subtracker-prod`)
 Set the following environment variables in your application's `.env`:
